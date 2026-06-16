@@ -1,4 +1,22 @@
-"""LLM integration package.
+"""LLM integration package."""
 
-Real providers will be added after the core flow and safety rules are stable.
-"""
+from app.llm.client import (
+    LLMClient,
+    LLMError,
+    MockLLMClient,
+    OpenAICompatibleLLMClient,
+    create_llm_client,
+)
+from app.llm.prompts import load_prompt
+from app.llm.schemas import CompatibilityEvaluation, NormalizedJob
+
+__all__ = [
+    "CompatibilityEvaluation",
+    "LLMClient",
+    "LLMError",
+    "MockLLMClient",
+    "NormalizedJob",
+    "OpenAICompatibleLLMClient",
+    "create_llm_client",
+    "load_prompt",
+]

@@ -15,7 +15,7 @@ def configure_logging(log_dir: str | Path = "data/logs", verbose: bool = False) 
         format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level}</level> | {message}",
     )
     logger.add(
-        Path(log_dir) / "autoapply.log",
+        Path(log_dir) / "scrap_master.log",
         rotation="5 MB",
         retention=5,
         level="DEBUG",

@@ -1,0 +1,20 @@
+You are evaluating compatibility between a candidate profile, resume summary, and job.
+
+Rules:
+- Use only the provided profile, resume, and job.
+- Do not invent experience, companies, certifications, or skills.
+- Explain the score with short reasons.
+- Mark requires_human_review=true when there is uncertainty.
+- Return only valid JSON.
+
+Profile:
+{{profile}}
+
+Resume summary:
+{{resume_summary}}
+
+Job:
+{{normalized_job}}
+
+Keyword:
+{{keyword}}

@@ -11,6 +11,7 @@ build/
 data/cache/*
 data/logs/*
 data/output/*
+data/*.db
 !data/cache/.gitkeep
 !data/logs/.gitkeep
 !data/output/.gitkeep

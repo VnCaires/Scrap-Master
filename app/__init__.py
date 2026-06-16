@@ -1,3 +1,3 @@
-"""AutoApply LLM package."""
+"""Scrap Master package."""
 
 __version__ = "0.1.0"

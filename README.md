@@ -1,4 +1,4 @@
-# AutoApply LLM
+# Scrap Master
 
 Initial Python foundation for a human-in-the-loop job application assistant.
 
@@ -9,10 +9,17 @@ This repository currently implements only the project base:
 - Typer CLI entrypoint.
 - Loguru logging.
 - Example settings and profile files.
+- SQLModel + SQLite persistence.
+- Resume PDF validation and text extraction.
+- Mock and OpenAI-compatible LLM clients.
+- Explainable local ranking.
 - A mock job source for validating the flow without real scraping.
 
 Real scraping, browser automation, form filling, and application submission are
 not implemented yet.
+
+The default example configuration uses `LLM_PROVIDER=mock`, so the current flow
+works offline unless you explicitly switch to `openai_compatible`.
 
 ## Setup
 
@@ -32,13 +39,20 @@ python -m playwright install
 ## Commands
 
 ```bash
-autoapply --help
-autoapply init
-autoapply config-check --settings config/settings.example.yaml
-autoapply validate-profile --profile config/profile.example.yaml
-autoapply search --keyword "Python LLM" --limit 5
-autoapply run --keyword "Machine Learning Engineer" --limit 10
+scrap-master --help
+scrap-master init
+scrap-master init-db --settings config/settings.example.yaml
+scrap-master config-check --settings config/settings.example.yaml
+scrap-master validate-profile --profile config/profile.example.yaml
+scrap-master parse-resume --pdf data/input/resume.pdf
+scrap-master search --keyword "Python LLM" --limit 5
+scrap-master rank --keyword "Python LLM"
+scrap-master run --keyword "Machine Learning Engineer" --limit 10
 ```
+
+The current `run` flow initializes the SQLite database, searches enabled
+sources, persists deduplicated jobs, ranks them, stores matches, and stops
+before any browser automation.
 
 ## Safety Defaults
 
