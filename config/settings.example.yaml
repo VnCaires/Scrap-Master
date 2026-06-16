@@ -1,0 +1,33 @@
+llm:
+  provider: "openai_compatible"
+  model: "gpt-4.1-mini"
+  temperature: 0.1
+  api_key: null
+  base_url: null
+
+runtime:
+  headless: false
+  max_jobs_per_source: 20
+  max_applications_per_run: 3
+  require_human_review: true
+  screenshot_on_error: true
+
+storage:
+  database_url: "sqlite:///data/autoapply.db"
+
+security:
+  allow_auto_submit: false
+  allowed_domains:
+    - "jobs.example.test"
+    - "greenhouse.io"
+    - "lever.co"
+    - "gupy.io"
+  blocked_domains: []
+
+sources:
+  - name: "mock"
+    enabled: true
+    max_results: 20
+
+profile_path: "config/profile.yaml"
+resume_pdf_path: "data/input/resume.pdf"

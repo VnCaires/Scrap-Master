@@ -1,0 +1,46 @@
+personal:
+  first_name: "Vinicius"
+  last_name: "Caires"
+  email: "email@example.com"
+  phone: "+55 00 00000-0000"
+  city: "Salvador"
+  country: "Brazil"
+  linkedin: ""
+  github: ""
+  portfolio: ""
+
+preferences:
+  target_roles:
+    - "Data Scientist"
+    - "Machine Learning Engineer"
+    - "Python Developer"
+  keywords:
+    - "LLM"
+    - "Machine Learning"
+    - "Python"
+  remote_only: true
+  relocation: false
+  contract_types:
+    - "CLT"
+    - "PJ"
+    - "Remote"
+  minimum_salary: null
+
+experience:
+  years_total: null
+  seniority: null
+  skills:
+    - "Python"
+    - "Machine Learning"
+    - "APIs"
+    - "Automation"
+    - "SQL"
+  languages:
+    portuguese: "native"
+    english: "intermediate"
+
+answers:
+  work_authorization: ""
+  salary_expectation: ""
+  notice_period: ""
+  cover_letter_template: ""
