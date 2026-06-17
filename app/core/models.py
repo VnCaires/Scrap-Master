@@ -107,6 +107,7 @@ class FormField(BaseModel):
     field_id: str
     label: str
     html_name: str | None = None
+    target_selector: str | None = None
     input_type: FieldInputType = FieldInputType.UNKNOWN
     mapped_profile_key: str | None = None
     proposed_value: str | None = None

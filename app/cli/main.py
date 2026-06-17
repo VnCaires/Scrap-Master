@@ -8,9 +8,9 @@ from pathlib import Path
 import typer
 from loguru import logger
 
-from app.browser import BrowserAutomationError, inspect_form_page
+from app.browser import BrowserAutomationError, fill_form_page, inspect_form_page
 from app.config.settings import load_profile, load_settings
-from app.core.models import ContractType, JobPosting, RemoteType, Seniority
+from app.core.models import ApplicationStatus, ContractType, JobPosting, RemoteType, Seniority
 from app.documents import ResumeError, parse_resume_pdf
 from app.forms import map_form_fields
 from app.llm import CompatibilityEvaluation, create_llm_client
@@ -279,6 +279,80 @@ def review(
 
     typer.echo(
         f"Saved application attempt {attempt.id} with status {status.value}. "
+        "No submit action was performed."
+    )
+
+
+@app.command("fill-form")
+def fill_form(
+    url: str = typer.Option(..., "--url", help="Local HTML file or URL to fill."),
+    profile: Path | None = typer.Option(None, "--profile", "-p", help="Path to profile YAML."),
+    settings: Path = typer.Option(Path("config/settings.yaml"), "--settings", "-s"),
+    screenshot: Path | None = typer.Option(
+        None,
+        "--screenshot",
+        help="Optional screenshot path for the filled local form.",
+    ),
+) -> None:
+    """Fill only safe fields in a local form and save a review attempt without submitting."""
+    loaded_settings = load_settings(settings)
+    init_database(loaded_settings.storage.database_url)
+    loaded_profile = load_profile(profile or loaded_settings.profile_path)
+
+    try:
+        inspection = asyncio.run(
+            inspect_form_page(url=url, headless=loaded_settings.runtime.headless)
+        )
+        mapping = map_form_fields(
+            inspection,
+            profile=loaded_profile,
+            resume_pdf_path=str(loaded_settings.resume_pdf_path),
+        )
+        fill_result = asyncio.run(
+            fill_form_page(
+                url=url,
+                fields=mapping.fields,
+                headless=loaded_settings.runtime.headless,
+                screenshot_path=screenshot,
+            )
+        )
+    except BrowserAutomationError as exc:
+        typer.echo(f"Browser error: {exc}", err=True)
+        raise typer.Exit(code=1) from exc
+
+    typer.echo(f"Filled form: {fill_result.url}")
+    typer.echo(f"Submitted: {'yes' if fill_result.submitted else 'no'}")
+    typer.echo(f"Filled fields: {len(fill_result.filled_fields)}")
+    for field in fill_result.filled_fields:
+        typer.echo(f"- filled {field.label} -> {field.proposed_value}")
+    typer.echo(f"Pending review fields: {len(fill_result.pending_review_fields)}")
+    for field in fill_result.pending_review_fields:
+        typer.echo(f"- review {field.label}")
+    if fill_result.screenshot_path:
+        typer.echo(f"Screenshot: {fill_result.screenshot_path}")
+
+    with session_scope(loaded_settings.storage.database_url) as session:
+        job_record = save_job_postings(session, [_local_form_job(fill_result.url)])[0]
+        attempt = save_application_attempt(
+            session=session,
+            job_record=job_record,
+            status=ApplicationStatus.NEEDS_REVIEW,
+            review_required=True,
+            result={
+                "url": fill_result.url,
+                "status": ApplicationStatus.NEEDS_REVIEW.value,
+                "submitted": False,
+                "filled_fields": [field.model_dump(mode="json") for field in fill_result.filled_fields],
+                "pending_review_fields": [
+                    field.model_dump(mode="json") for field in fill_result.pending_review_fields
+                ],
+                "screenshot_path": fill_result.screenshot_path,
+                "risks": fill_result.risks,
+            },
+        )
+
+    typer.echo(
+        f"Saved application attempt {attempt.id} with status needs_review. "
         "No submit action was performed."
     )
 

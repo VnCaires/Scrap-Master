@@ -45,7 +45,7 @@ Fases implementadas ate agora:
 2. Fase 1: perfil e parser inicial de curriculo.
 3. Fase 2: busca mockada com persistencia SQLite.
 4. Fase 3: cliente LLM abstrato, prompts, schemas e ranking explicavel.
-5. Fase 4 parcial: inspecao local de formulario com Playwright e revisao CLI sem envio.
+5. Fase 4 parcial: inspecao local, preenchimento seguro e revisao CLI sem envio.
 
 O que ja existe:
 
@@ -60,7 +60,7 @@ O que ja existe:
 9. Ranking local explicavel em `app/ranking/scoring.py`.
 10. Fonte mockada e registry simples de fontes em `app/sources/`.
 11. CLI funcional em `app/cli/main.py`.
-12. Inspecao local segura de formulario em `app/browser/`.
+12. Inspecao e preenchimento local seguro de formulario em `app/browser/`.
 13. Mapeamento conservador de campos em `app/forms/`.
 14. Rascunho de revisao CLI em `app/review/`.
 15. Suite de testes cobrindo config, CLI, storage, ranking, LLM, documentos, browser, forms e review.
@@ -111,7 +111,7 @@ Modulos relevantes hoje:
 6. `app/cli/main.py`
    Orquestra os fluxos atuais.
 7. `app/browser/`
-   Abre paginas locais/teste com Playwright para inspecao sem submit.
+   Abre paginas locais/teste com Playwright para inspecao e autofill seguro sem submit.
 8. `app/forms/`
    Detecta e mapeia campos para valores seguros do perfil.
 9. `app/review/`
@@ -180,10 +180,11 @@ Fluxo de formulario local hoje:
 1. Abrir fixture HTML local com Playwright
 2. Detectar inputs, selects, textareas e botao de submit
 3. Mapear campos simples com dados do profile
-4. Marcar campos sensiveis para revisao humana
-5. Mostrar rascunho na CLI
-6. Salvar tentativa como draft, approved ou skipped
-7. Nunca clicar em submit
+4. Preencher apenas campos seguros no DOM
+5. Marcar campos sensiveis para revisao humana
+6. Mostrar rascunho na CLI
+7. Salvar tentativa como draft, approved ou skipped
+8. Nunca clicar em submit
 ```
 
 ## 7. Comandos CLI atuais
@@ -201,6 +202,7 @@ scrap-master search --settings config/settings.yaml --keyword "Python LLM" --lim
 scrap-master rank --settings config/settings.yaml --keyword "Python LLM"
 scrap-master run --settings config/settings.yaml --keyword "Machine Learning Engineer" --limit 10
 scrap-master inspect-form --url tests/fixtures/job_form.html
+scrap-master fill-form --url tests/fixtures/job_form.html
 scrap-master review --url tests/fixtures/job_form.html
 ```
 
@@ -266,15 +268,14 @@ Definition of Done para novas features continua sendo:
 
 ## 11. Proximos passos recomendados
 
-A proxima etapa natural e completar a Fase 4 com preenchimento local controlado, ainda sem sites reais.
+A proxima etapa natural e completar a Fase 4 com upload local de PDF e edicao de revisao, ainda sem sites reais.
 
 Prioridade recomendada:
 
-1. Implementar preenchimento local em pagina fake.
-2. Adicionar upload de PDF em fixture local.
-3. Permitir edicao CLI dos valores antes de salvar decisao.
-4. Criar screenshots/traces em erro.
-5. Preparar detector de CAPTCHA/bloqueio antes de qualquer site real.
+1. Adicionar upload de PDF em fixture local.
+2. Permitir edicao CLI dos valores antes de salvar decisao.
+3. Criar screenshots/traces em erro.
+4. Preparar detector de CAPTCHA/bloqueio antes de qualquer site real.
 
 ## 12. Regra de manutencao deste guia
 

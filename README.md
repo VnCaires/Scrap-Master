@@ -14,6 +14,7 @@ This repository currently implements only the project base:
 - Mock and OpenAI-compatible LLM clients.
 - Explainable local ranking.
 - Safe local Playwright form inspection.
+- Safe local Playwright autofill for non-sensitive fields.
 - CLI review drafts that never submit applications.
 - A mock job source for validating the flow without real scraping.
 
@@ -51,6 +52,7 @@ scrap-master search --keyword "Python LLM" --limit 5
 scrap-master rank --keyword "Python LLM"
 scrap-master run --keyword "Machine Learning Engineer" --limit 10
 scrap-master inspect-form --url tests/fixtures/job_form.html
+scrap-master fill-form --url tests/fixtures/job_form.html
 scrap-master review --url tests/fixtures/job_form.html
 ```
 
@@ -59,8 +61,8 @@ sources, persists deduplicated jobs, ranks them, stores matches, and stops
 before any browser automation.
 
 The current form flow only works against local/test pages. It can inspect fields,
-prepare a review draft, and persist the review decision, but it never clicks a
-submit button.
+autofill only safe fields, prepare a review draft, and persist the review
+decision, but it never clicks a submit button.
 
 ## Safety Defaults
 

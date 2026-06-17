@@ -70,6 +70,7 @@ def _map_field(
         field_id=field.field_id,
         label=field.label or field.html_name or field.field_id,
         html_name=field.html_name,
+        target_selector=field.target_selector,
         input_type=input_type,
         mapped_profile_key=mapped_key,
         proposed_value=proposed_value,

@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from app.forms.models import FormInspectionResult, RawFormField
+from app.core.models import FieldInputType, FormField
+from app.forms.models import FormFillResult, FormInspectionResult, RawFormField
 
 
 class BrowserAutomationError(RuntimeError):
@@ -48,6 +49,57 @@ async def inspect_form_page(
     )
 
 
+async def fill_form_page(
+    url: str | Path,
+    fields: list[FormField],
+    headless: bool = True,
+    screenshot_path: str | Path | None = None,
+) -> FormFillResult:
+    try:
+        from playwright.async_api import async_playwright
+    except ImportError as exc:
+        raise BrowserAutomationError(
+            "Playwright is not installed. Install browser dependencies with: "
+            "python -m pip install -e \".[browser]\""
+        ) from exc
+
+    target_url = _to_browser_url(url)
+    autofill_fields = [
+        field
+        for field in fields
+        if not field.requires_human_review
+        and field.proposed_value
+        and field.target_selector
+        and field.input_type in {FieldInputType.TEXT, FieldInputType.EMAIL, FieldInputType.TEL}
+    ]
+    pending_review_fields = [field for field in fields if field not in autofill_fields]
+
+    try:
+        async with async_playwright() as playwright:
+            browser = await playwright.chromium.launch(headless=headless)
+            page = await browser.new_page()
+            await page.goto(target_url, wait_until="domcontentloaded")
+            for field in autofill_fields:
+                await page.locator(field.target_selector).fill(field.proposed_value or "")
+            if screenshot_path:
+                await page.screenshot(path=str(screenshot_path), full_page=True)
+            await browser.close()
+    except Exception as exc:
+        raise BrowserAutomationError(
+            "Playwright could not fill the page. If browsers are missing, run: "
+            "python -m playwright install chromium"
+        ) from exc
+
+    return FormFillResult(
+        url=target_url,
+        filled_fields=autofill_fields,
+        pending_review_fields=pending_review_fields,
+        screenshot_path=str(screenshot_path) if screenshot_path else None,
+        submitted=False,
+        risks=["Autofill mode only; submit was not triggered."],
+    )
+
+
 def _to_browser_url(url: str | Path) -> str:
     text = str(url)
     if text.startswith(("http://", "https://", "file://")):
@@ -83,7 +135,12 @@ _FORM_FIELD_SCRIPT = """
     label: labelFor(el),
     html_name: el.getAttribute('name'),
     input_type: inputType(el),
-    placeholder: el.getAttribute('placeholder')
+    placeholder: el.getAttribute('placeholder'),
+    target_selector: el.id
+      ? `#${CSS.escape(el.id)}`
+      : (el.getAttribute('name')
+          ? `${el.tagName.toLowerCase()}[name="${CSS.escape(el.getAttribute('name'))}"]`
+          : null)
   }));
 }
 """

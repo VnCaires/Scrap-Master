@@ -98,3 +98,42 @@ def test_cli_inspect_form_and_review(tmp_path) -> None:
     assert len(attempts) == 1
     assert attempts[0].status == "approved"
     assert attempts[0].submitted_at is None
+
+
+def test_cli_fill_form(tmp_path) -> None:
+    import asyncio
+    import pytest
+
+    try:
+        asyncio.run(inspect_form_page("tests/fixtures/job_form.html", headless=True))
+    except BrowserAutomationError as exc:
+        pytest.skip(str(exc))
+
+    settings = write_settings(tmp_path)
+    runner = CliRunner()
+
+    result = runner.invoke(
+        app,
+        [
+            "fill-form",
+            "--settings",
+            str(settings),
+            "--url",
+            "tests/fixtures/job_form.html",
+            "--screenshot",
+            str(tmp_path / "filled-form.png"),
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert "Filled fields:" in result.output
+    assert "Pending review fields:" in result.output
+    assert "No submit action was performed" in result.output
+
+    engine = create_db_engine(f"sqlite:///{tmp_path / 'scrap_master.db'}")
+    with Session(engine) as session:
+        attempts = session.exec(select(ApplicationAttemptRecord)).all()
+
+    assert len(attempts) == 1
+    assert attempts[0].status == "needs_review"
+    assert attempts[0].submitted_at is None

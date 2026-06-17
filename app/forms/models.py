@@ -11,6 +11,7 @@ class RawFormField(BaseModel):
     html_name: str | None = None
     input_type: str = "unknown"
     placeholder: str | None = None
+    target_selector: str | None = None
 
 
 class FormInspectionResult(BaseModel):
@@ -27,3 +28,12 @@ class FormMappingResult(BaseModel):
     submit_button_selector: str | None = None
     risks: list[str] = Field(default_factory=list)
     confidence: float = Field(default=0.0, ge=0.0, le=1.0)
+
+
+class FormFillResult(BaseModel):
+    url: str
+    filled_fields: list[FormField] = Field(default_factory=list)
+    pending_review_fields: list[FormField] = Field(default_factory=list)
+    screenshot_path: str | None = None
+    submitted: bool = False
+    risks: list[str] = Field(default_factory=list)
