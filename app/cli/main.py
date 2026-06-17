@@ -8,17 +8,22 @@ from pathlib import Path
 import typer
 from loguru import logger
 
+from app.browser import BrowserAutomationError, inspect_form_page
 from app.config.settings import load_profile, load_settings
+from app.core.models import ContractType, JobPosting, RemoteType, Seniority
 from app.documents import ResumeError, parse_resume_pdf
+from app.forms import map_form_fields
 from app.llm import CompatibilityEvaluation, create_llm_client
 from app.observability import configure_logging
 from app.ranking import rank_jobs
+from app.review import build_review_draft, normalize_review_decision, render_review_draft
 from app.security import mask_email, mask_name
 from app.sources import get_enabled_source_adapters
 from app.storage import (
     init_database,
     job_from_record,
     list_job_posting_records,
+    save_application_attempt,
     save_job_match,
     save_job_postings,
     save_run_history,
@@ -187,6 +192,97 @@ def run(
     )
 
 
+@app.command("inspect-form")
+def inspect_form(
+    url: str = typer.Option(..., "--url", help="Local HTML file or URL to inspect."),
+    settings: Path = typer.Option(Path("config/settings.yaml"), "--settings", "-s"),
+    screenshot: Path | None = typer.Option(None, "--screenshot", help="Optional screenshot output path."),
+) -> None:
+    """Inspect a form without filling or submitting it."""
+    loaded_settings = load_settings(settings)
+    try:
+        inspection = asyncio.run(
+            inspect_form_page(
+                url=url,
+                headless=loaded_settings.runtime.headless,
+                screenshot_path=screenshot,
+            )
+        )
+    except BrowserAutomationError as exc:
+        typer.echo(f"Browser error: {exc}", err=True)
+        raise typer.Exit(code=1) from exc
+
+    typer.echo(f"Inspected: {inspection.url}")
+    typer.echo(f"Submitted: {'yes' if inspection.submitted else 'no'}")
+    typer.echo(f"Submit selector: {inspection.submit_button_selector or '<not found>'}")
+    for field in inspection.fields:
+        typer.echo(
+            f"- {field.label or field.field_id} [{field.input_type}] "
+            f"name={field.html_name or '<none>'}"
+        )
+
+
+@app.command()
+def review(
+    url: str = typer.Option(..., "--url", help="Local HTML file or URL to review."),
+    profile: Path | None = typer.Option(None, "--profile", "-p", help="Path to profile YAML."),
+    settings: Path = typer.Option(Path("config/settings.yaml"), "--settings", "-s"),
+    decision: str | None = typer.Option(
+        None,
+        "--decision",
+        help="Non-interactive decision: approve, skip, or draft.",
+    ),
+) -> None:
+    """Create a local review draft and persist it without submitting anything."""
+    loaded_settings = load_settings(settings)
+    init_database(loaded_settings.storage.database_url)
+    loaded_profile = load_profile(profile or loaded_settings.profile_path)
+
+    try:
+        inspection = asyncio.run(
+            inspect_form_page(url=url, headless=loaded_settings.runtime.headless)
+        )
+    except BrowserAutomationError as exc:
+        typer.echo(f"Browser error: {exc}", err=True)
+        raise typer.Exit(code=1) from exc
+
+    mapping = map_form_fields(
+        inspection,
+        profile=loaded_profile,
+        resume_pdf_path=str(loaded_settings.resume_pdf_path),
+    )
+    draft = build_review_draft(mapping)
+    typer.echo(render_review_draft(draft))
+
+    chosen = decision or typer.prompt("Decision [approve/skip/draft]", default="draft")
+    try:
+        status = normalize_review_decision(chosen)
+    except ValueError as exc:
+        typer.echo(str(exc), err=True)
+        raise typer.Exit(code=1) from exc
+
+    with session_scope(loaded_settings.storage.database_url) as session:
+        job_record = save_job_postings(session, [_local_form_job(inspection.url)])[0]
+        attempt = save_application_attempt(
+            session=session,
+            job_record=job_record,
+            status=status,
+            review_required=True,
+            result={
+                "url": inspection.url,
+                "status": status.value,
+                "submitted": False,
+                "fields": [field.model_dump(mode="json") for field in mapping.fields],
+                "risks": mapping.risks,
+            },
+        )
+
+    typer.echo(
+        f"Saved application attempt {attempt.id} with status {status.value}. "
+        "No submit action was performed."
+    )
+
+
 def _copy_example(source: Path, destination: Path, force: bool) -> None:
     if destination.exists() and not force:
         typer.echo(f"Skipped existing file: {destination}")
@@ -233,4 +329,19 @@ def _compatibility_prompt(profile, job, keyword: str) -> str:
             "job": job.model_dump(mode="json"),
             "keyword": keyword,
         }
+    )
+
+
+def _local_form_job(url: str) -> JobPosting:
+    return JobPosting(
+        source="local_form",
+        url=url,
+        title="Local form review",
+        company="Scrap Master",
+        location="local",
+        remote_type=RemoteType.UNKNOWN,
+        seniority=Seniority.UNKNOWN,
+        contract_type=ContractType.UNKNOWN,
+        description="Local fake form used to create a human review draft.",
+        requirements=[],
     )

@@ -1,0 +1,29 @@
+from __future__ import annotations
+
+from pydantic import BaseModel, Field
+
+from app.core.models import FormField
+
+
+class RawFormField(BaseModel):
+    field_id: str
+    label: str = ""
+    html_name: str | None = None
+    input_type: str = "unknown"
+    placeholder: str | None = None
+
+
+class FormInspectionResult(BaseModel):
+    url: str
+    fields: list[RawFormField] = Field(default_factory=list)
+    submit_button_selector: str | None = None
+    risks: list[str] = Field(default_factory=list)
+    submitted: bool = False
+
+
+class FormMappingResult(BaseModel):
+    url: str
+    fields: list[FormField] = Field(default_factory=list)
+    submit_button_selector: str | None = None
+    risks: list[str] = Field(default_factory=list)
+    confidence: float = Field(default=0.0, ge=0.0, le=1.0)

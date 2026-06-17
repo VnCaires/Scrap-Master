@@ -13,10 +13,12 @@ This repository currently implements only the project base:
 - Resume PDF validation and text extraction.
 - Mock and OpenAI-compatible LLM clients.
 - Explainable local ranking.
+- Safe local Playwright form inspection.
+- CLI review drafts that never submit applications.
 - A mock job source for validating the flow without real scraping.
 
-Real scraping, browser automation, form filling, and application submission are
-not implemented yet.
+Real scraping, real-site form filling, and application submission are not
+implemented yet.
 
 The default example configuration uses `LLM_PROVIDER=mock`, so the current flow
 works offline unless you explicitly switch to `openai_compatible`.
@@ -48,11 +50,17 @@ scrap-master parse-resume --pdf data/input/resume.pdf
 scrap-master search --keyword "Python LLM" --limit 5
 scrap-master rank --keyword "Python LLM"
 scrap-master run --keyword "Machine Learning Engineer" --limit 10
+scrap-master inspect-form --url tests/fixtures/job_form.html
+scrap-master review --url tests/fixtures/job_form.html
 ```
 
 The current `run` flow initializes the SQLite database, searches enabled
 sources, persists deduplicated jobs, ranks them, stores matches, and stops
 before any browser automation.
+
+The current form flow only works against local/test pages. It can inspect fields,
+prepare a review draft, and persist the review decision, but it never clicks a
+submit button.
 
 ## Safety Defaults
 

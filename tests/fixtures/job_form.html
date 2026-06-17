@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8">
+    <title>Vaga Fake - Analista de Dados</title>
+  </head>
+  <body>
+    <main>
+      <h1>Analista de Dados</h1>
+      <form id="application-form" action="/submit" method="post" enctype="multipart/form-data">
+        <label for="full_name">Nome completo</label>
+        <input id="full_name" name="full_name" type="text" autocomplete="name">
+
+        <label for="email">E-mail</label>
+        <input id="email" name="email" type="email" autocomplete="email">
+
+        <label for="phone">Telefone</label>
+        <input id="phone" name="phone" type="tel" autocomplete="tel">
+
+        <label for="city">Cidade</label>
+        <input id="city" name="city" type="text" placeholder="Cidade onde voce mora">
+
+        <label for="linkedin">LinkedIn</label>
+        <input id="linkedin" name="linkedin" type="url">
+
+        <label for="github">GitHub</label>
+        <input id="github" name="github" type="url">
+
+        <label for="resume">Curriculo em PDF</label>
+        <input id="resume" name="resume" type="file" accept="application/pdf">
+
+        <label for="salary_expectation">Pretensao salarial</label>
+        <input id="salary_expectation" name="salary_expectation" type="text">
+
+        <label for="work_authorization">Autorizacao de trabalho</label>
+        <select id="work_authorization" name="work_authorization">
+          <option value="">Selecione</option>
+          <option value="brasil">Autorizado a trabalhar no Brasil</option>
+          <option value="outro">Preciso de apoio</option>
+        </select>
+
+        <label for="cover_letter">Carta de apresentacao</label>
+        <textarea id="cover_letter" name="cover_letter"></textarea>
+
+        <label>
+          <input id="terms" name="terms" type="checkbox">
+          Aceito os termos da candidatura
+        </label>
+
+        <button type="submit" id="submit_application">Enviar candidatura</button>
+      </form>
+    </main>
+  </body>
+</html>

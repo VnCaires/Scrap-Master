@@ -1,5 +1,5 @@
-"""Browser automation package.
+"""Safe local browser inspection package."""
 
-Playwright support is planned, but no real scraping or application automation is
-implemented in the initial foundation.
-"""
+from app.browser.manager import BrowserAutomationError, inspect_form_page
+
+__all__ = ["BrowserAutomationError", "inspect_form_page"]

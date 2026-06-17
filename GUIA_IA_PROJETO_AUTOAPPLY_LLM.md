@@ -45,6 +45,7 @@ Fases implementadas ate agora:
 2. Fase 1: perfil e parser inicial de curriculo.
 3. Fase 2: busca mockada com persistencia SQLite.
 4. Fase 3: cliente LLM abstrato, prompts, schemas e ranking explicavel.
+5. Fase 4 parcial: inspecao local de formulario com Playwright e revisao CLI sem envio.
 
 O que ja existe:
 
@@ -59,16 +60,19 @@ O que ja existe:
 9. Ranking local explicavel em `app/ranking/scoring.py`.
 10. Fonte mockada e registry simples de fontes em `app/sources/`.
 11. CLI funcional em `app/cli/main.py`.
-12. Suite de testes cobrindo config, CLI, storage, ranking, LLM e documentos.
+12. Inspecao local segura de formulario em `app/browser/`.
+13. Mapeamento conservador de campos em `app/forms/`.
+14. Rascunho de revisao CLI em `app/review/`.
+15. Suite de testes cobrindo config, CLI, storage, ranking, LLM, documentos, browser, forms e review.
 
 O que ainda NAO existe:
 
 1. Scraping real.
 2. Login manual assistido.
 3. Normalizacao real de vagas usando LLM no fluxo de busca.
-4. Automacao Playwright de paginas de candidatura.
-5. Detector de campos de formulario.
-6. Revisao humana interativa de candidatura.
+4. Automacao Playwright em sites reais.
+5. Preenchimento real de formulario.
+6. Revisao humana com edicao de respostas.
 7. Envio final de candidatura.
 
 ## 4. Estrutura atual importante
@@ -106,6 +110,12 @@ Modulos relevantes hoje:
    Contem schema, engine, sessao e repositorio SQLite.
 6. `app/cli/main.py`
    Orquestra os fluxos atuais.
+7. `app/browser/`
+   Abre paginas locais/teste com Playwright para inspecao sem submit.
+8. `app/forms/`
+   Detecta e mapeia campos para valores seguros do perfil.
+9. `app/review/`
+   Monta rascunho de revisao e normaliza decisoes CLI.
 
 ## 5. Configuracao atual
 
@@ -151,7 +161,7 @@ Fluxo implementado no momento:
 6. Gerar avaliacao de compatibilidade via LLM mock ou provider OpenAI-compativel
 7. Ranquear vagas localmente
 8. Salvar matches e historico de execucao
-9. Encerrar antes de qualquer browser automation
+9. Encerrar antes de qualquer browser automation em site real
 ```
 
 Fluxo de curriculo hoje:
@@ -162,6 +172,18 @@ Fluxo de curriculo hoje:
 3. Validar tamanho maximo
 4. Extrair texto com pypdf
 5. Retornar erro claro se o arquivo nao puder ser lido
+```
+
+Fluxo de formulario local hoje:
+
+```text
+1. Abrir fixture HTML local com Playwright
+2. Detectar inputs, selects, textareas e botao de submit
+3. Mapear campos simples com dados do profile
+4. Marcar campos sensiveis para revisao humana
+5. Mostrar rascunho na CLI
+6. Salvar tentativa como draft, approved ou skipped
+7. Nunca clicar em submit
 ```
 
 ## 7. Comandos CLI atuais
@@ -178,12 +200,13 @@ scrap-master parse-resume --pdf data/input/resume.pdf
 scrap-master search --settings config/settings.yaml --keyword "Python LLM" --limit 5
 scrap-master rank --settings config/settings.yaml --keyword "Python LLM"
 scrap-master run --settings config/settings.yaml --keyword "Machine Learning Engineer" --limit 10
+scrap-master inspect-form --url tests/fixtures/job_form.html
+scrap-master review --url tests/fixtures/job_form.html
 ```
 
 Comandos ainda nao implementados:
 
-1. `scrap-master review`
-2. `scrap-master apply`
+1. `scrap-master apply`
 
 ## 8. Persistencia atual
 
@@ -229,7 +252,7 @@ Estado atual do ranking:
 Status atual:
 
 1. `python -m pytest` passa.
-2. A suite cobre config, CLI, documentos, storage, ranking e LLM.
+2. A suite cobre config, CLI, documentos, storage, ranking, LLM, browser, forms e review.
 
 Definition of Done para novas features continua sendo:
 
@@ -243,16 +266,15 @@ Definition of Done para novas features continua sendo:
 
 ## 11. Proximos passos recomendados
 
-A proxima etapa natural e entrar na Fase 4, sem pular as restricoes de seguranca.
+A proxima etapa natural e completar a Fase 4 com preenchimento local controlado, ainda sem sites reais.
 
 Prioridade recomendada:
 
-1. Criar formulario HTML fake em `tests/fixtures/`.
-2. Implementar browser manager com Playwright.
-3. Detectar campos basicos de formulario.
-4. Mapear campos simples do profile.
-5. Pausar antes de qualquer envio.
-6. Criar fluxo de revisao humana em CLI.
+1. Implementar preenchimento local em pagina fake.
+2. Adicionar upload de PDF em fixture local.
+3. Permitir edicao CLI dos valores antes de salvar decisao.
+4. Criar screenshots/traces em erro.
+5. Preparar detector de CAPTCHA/bloqueio antes de qualquer site real.
 
 ## 12. Regra de manutencao deste guia
 

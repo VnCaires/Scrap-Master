@@ -11,6 +11,7 @@ from app.storage.repository import (
     job_from_record,
     list_job_posting_records,
     list_job_postings,
+    save_application_attempt,
     save_job_match,
     save_job_postings,
     save_run_history,
@@ -28,6 +29,7 @@ __all__ = [
     "list_job_postings",
     "save_job_match",
     "save_job_postings",
+    "save_application_attempt",
     "save_run_history",
     "session_scope",
 ]
