@@ -48,7 +48,7 @@ def init(force: bool = typer.Option(False, "--force", help="Overwrite existing l
 @app.command("init-db")
 def init_db(
     settings: Path = typer.Option(
-        Path("config/settings.example.yaml"),
+        Path("config/settings.yaml"),
         "--settings",
         "-s",
         help="Path to settings YAML.",
@@ -64,7 +64,7 @@ def init_db(
 @app.command("config-check")
 def config_check(
     settings: Path = typer.Option(
-        Path("config/settings.example.yaml"),
+        Path("config/settings.yaml"),
         "--settings",
         "-s",
         help="Path to settings YAML.",
@@ -80,7 +80,7 @@ def config_check(
 @app.command("validate-profile")
 def validate_profile(
     profile: Path = typer.Option(
-        Path("config/profile.example.yaml"),
+        Path("config/profile.yaml"),
         "--profile",
         "-p",
         help="Path to profile YAML.",
@@ -123,7 +123,7 @@ def parse_resume(
 def search(
     keyword: str = typer.Option(..., "--keyword", "-k", help="Job search keyword."),
     limit: int = typer.Option(10, "--limit", "-l", min=1, help="Maximum number of jobs."),
-    settings: Path = typer.Option(Path("config/settings.example.yaml"), "--settings", "-s"),
+    settings: Path = typer.Option(Path("config/settings.yaml"), "--settings", "-s"),
 ) -> None:
     """Search configured sources and persist deduplicated jobs."""
     loaded_settings = load_settings(settings)
@@ -141,7 +141,7 @@ def search(
 @app.command()
 def rank(
     keyword: str = typer.Option(..., "--keyword", "-k", help="Job ranking keyword."),
-    settings: Path = typer.Option(Path("config/settings.example.yaml"), "--settings", "-s"),
+    settings: Path = typer.Option(Path("config/settings.yaml"), "--settings", "-s"),
     profile: Path | None = typer.Option(None, "--profile", "-p", help="Path to profile YAML."),
 ) -> None:
     """Rank persisted jobs with explainable local scoring and optional mock LLM signals."""
@@ -156,7 +156,7 @@ def rank(
 def run(
     keyword: str = typer.Option(..., "--keyword", "-k", help="Job search keyword."),
     limit: int = typer.Option(10, "--limit", "-l", min=1, help="Maximum number of jobs."),
-    settings: Path = typer.Option(Path("config/settings.example.yaml"), "--settings", "-s"),
+    settings: Path = typer.Option(Path("config/settings.yaml"), "--settings", "-s"),
 ) -> None:
     """Run search, persistence, ranking, and stop before browser automation."""
     loaded_settings = load_settings(settings)

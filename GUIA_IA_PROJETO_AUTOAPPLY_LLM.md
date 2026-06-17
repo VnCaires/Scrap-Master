@@ -121,8 +121,9 @@ Observacoes importantes:
 
 1. O exemplo padrao usa `llm.provider=mock` para desenvolvimento offline.
 2. O banco padrao continua sendo `sqlite:///data/scrap_master.db`.
-3. `profile_path` no exemplo aponta para `config/profile.example.yaml`.
-4. `resume_pdf_path` continua sendo apenas uma referencia; o parser valida no momento de uso.
+3. O padrao operacional agora usa `config/settings.yaml` e `config/profile.yaml`.
+4. `profile_path` no settings local aponta para `config/profile.yaml`.
+5. `resume_pdf_path` continua sendo apenas uma referencia; o parser valida no momento de uso.
 
 Variaveis de ambiente relevantes:
 
@@ -170,13 +171,13 @@ Comandos realmente implementados hoje:
 ```bash
 scrap-master --help
 scrap-master init
-scrap-master init-db --settings config/settings.example.yaml
-scrap-master config-check --settings config/settings.example.yaml
-scrap-master validate-profile --profile config/profile.example.yaml
+scrap-master init-db --settings config/settings.yaml
+scrap-master config-check --settings config/settings.yaml
+scrap-master validate-profile --profile config/profile.yaml
 scrap-master parse-resume --pdf data/input/resume.pdf
-scrap-master search --settings config/settings.example.yaml --keyword "Python LLM" --limit 5
-scrap-master rank --settings config/settings.example.yaml --keyword "Python LLM"
-scrap-master run --settings config/settings.example.yaml --keyword "Machine Learning Engineer" --limit 10
+scrap-master search --settings config/settings.yaml --keyword "Python LLM" --limit 5
+scrap-master rank --settings config/settings.yaml --keyword "Python LLM"
+scrap-master run --settings config/settings.yaml --keyword "Machine Learning Engineer" --limit 10
 ```
 
 Comandos ainda nao implementados:

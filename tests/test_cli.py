@@ -12,7 +12,10 @@ def test_cli_help() -> None:
 
 
 def test_cli_search_uses_mock_source() -> None:
-    result = CliRunner().invoke(app, ["search", "--keyword", "Python", "--limit", "1"])
+    result = CliRunner().invoke(
+        app,
+        ["search", "--settings", "config/settings.example.yaml", "--keyword", "Python", "--limit", "1"],
+    )
 
     assert result.exit_code == 0
     assert "Python" in result.output

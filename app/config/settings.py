@@ -65,7 +65,7 @@ class AppSettings(BaseModel):
     storage: StorageSettings = Field(default_factory=StorageSettings)
     security: SecuritySettings = Field(default_factory=SecuritySettings)
     sources: list[JobSource] = Field(default_factory=lambda: [JobSource(name="mock")])
-    profile_path: Path = Path("config/profile.example.yaml")
+    profile_path: Path = Path("config/profile.yaml")
     resume_pdf_path: Path = Path("data/input/resume.pdf")
 
     def enabled_sources(self) -> list[JobSource]:
@@ -128,13 +128,13 @@ class UserProfile(BaseModel):
         return fields
 
 
-def load_settings(path: str | Path = "config/settings.example.yaml") -> AppSettings:
+def load_settings(path: str | Path = "config/settings.yaml") -> AppSettings:
     data = _load_yaml(path)
     data = _deep_merge(data, _settings_from_env())
     return AppSettings.model_validate(data)
 
 
-def load_profile(path: str | Path = "config/profile.example.yaml") -> UserProfile:
+def load_profile(path: str | Path = "config/profile.yaml") -> UserProfile:
     data = _load_yaml(path)
     return UserProfile.model_validate(data)
 

@@ -29,5 +29,5 @@ sources:
     enabled: true
     max_results: 20
 
-profile_path: "config/profile.example.yaml"
+profile_path: "config/profile.yaml"
 resume_pdf_path: "data/input/resume.pdf"

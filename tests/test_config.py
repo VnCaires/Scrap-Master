@@ -12,6 +12,7 @@ def test_load_settings_example() -> None:
     assert settings.runtime.require_human_review is True
     assert settings.security.allow_auto_submit is False
     assert settings.enabled_sources()[0].name == "mock"
+    assert settings.profile_path.as_posix() == "config/profile.yaml"
 
 
 def test_environment_overrides_database_url(monkeypatch: pytest.MonkeyPatch) -> None:

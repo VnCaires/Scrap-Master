@@ -41,9 +41,9 @@ python -m playwright install
 ```bash
 scrap-master --help
 scrap-master init
-scrap-master init-db --settings config/settings.example.yaml
-scrap-master config-check --settings config/settings.example.yaml
-scrap-master validate-profile --profile config/profile.example.yaml
+scrap-master init-db --settings config/settings.yaml
+scrap-master config-check --settings config/settings.yaml
+scrap-master validate-profile --profile config/profile.yaml
 scrap-master parse-resume --pdf data/input/resume.pdf
 scrap-master search --keyword "Python LLM" --limit 5
 scrap-master rank --keyword "Python LLM"
