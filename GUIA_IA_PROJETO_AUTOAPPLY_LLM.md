@@ -45,7 +45,7 @@ Fases implementadas ate agora:
 2. Fase 1: perfil e parser inicial de curriculo.
 3. Fase 2: busca mockada com persistencia SQLite.
 4. Fase 3: cliente LLM abstrato, prompts, schemas e ranking explicavel.
-5. Fase 4 parcial: inspecao local, preenchimento seguro, upload local de PDF e revisao CLI editavel sem envio.
+5. Fase 4 parcial: portal local realista com fluxo multi-step, preenchimento seguro, upload local de PDF e revisao CLI editavel sem envio.
 
 O que ja existe:
 
@@ -60,7 +60,7 @@ O que ja existe:
 9. Ranking local explicavel em `app/ranking/scoring.py`.
 10. Fonte mockada e registry simples de fontes em `app/sources/`.
 11. CLI funcional em `app/cli/main.py`.
-12. Inspecao, preenchimento local seguro e aplicacao de rascunho revisado em `app/browser/`.
+12. Inspecao de fluxo local multi-step, preenchimento seguro e aplicacao de rascunho revisado em `app/browser/`.
 13. Mapeamento conservador de campos em `app/forms/`.
 14. Rascunho de revisao CLI com edicao de campos pendentes em `app/review/`.
 15. Comandos de auditoria para `application_attempts`.
@@ -112,7 +112,7 @@ Modulos relevantes hoje:
 6. `app/cli/main.py`
    Orquestra os fluxos atuais.
 7. `app/browser/`
-   Abre paginas locais/teste com Playwright para inspecao, autofill seguro, upload local de PDF e aplicacao de rascunho sem submit.
+   Abre paginas locais/teste com Playwright para inspecao de fluxo, autofill seguro, upload local de PDF e aplicacao de rascunho sem submit.
 8. `app/forms/`
    Detecta e mapeia campos para valores seguros do perfil.
 9. `app/review/`
@@ -180,15 +180,16 @@ Fluxo de curriculo hoje:
 Fluxo de formulario local hoje:
 
 ```text
-1. Abrir fixture HTML local com Playwright
-2. Detectar inputs, selects, textareas e botao de submit
-3. Mapear campos simples com dados do profile
-4. Preencher apenas campos seguros no DOM
-5. Marcar campos sensiveis para revisao humana
-6. Permitir edicao CLI de campos pendentes
-7. Validar e anexar PDF local configurado quando houver campo de curriculo
-8. Salvar tentativa como draft, approved ou skipped
-9. Nunca clicar em submit
+1. Abrir fixture local de portal de carreiras com Playwright
+2. Navegar localmente entre listagem, detalhe da vaga e candidatura
+3. Detectar inputs, selects, textareas e botao de submit na pagina final
+4. Mapear campos simples com dados do profile
+5. Preencher apenas campos seguros no DOM
+6. Marcar campos sensiveis para revisao humana
+7. Permitir edicao CLI de campos pendentes
+8. Validar e anexar PDF local configurado quando houver campo de curriculo
+9. Salvar tentativa como draft, approved ou skipped com paginas visitadas
+10. Nunca clicar em submit
 ```
 
 ## 7. Comandos CLI atuais
@@ -207,6 +208,7 @@ scrap-master search --settings config/settings.yaml --keyword "Python LLM" --lim
 scrap-master rank --settings config/settings.yaml --keyword "Python LLM"
 scrap-master run --settings config/settings.yaml --keyword "Machine Learning Engineer" --limit 10
 scrap-master inspect-form --url tests/fixtures/job_form.html
+scrap-master inspect-flow --url tests/fixtures/careers_home.html
 scrap-master fill-form --url tests/fixtures/job_form.html
 scrap-master review --url tests/fixtures/job_form.html
 scrap-master review --url tests/fixtures/job_form.html --decision draft
@@ -234,6 +236,7 @@ Comportamentos atuais:
 2. Matches armazenam score, motivos, riscos e requisitos ausentes.
 3. Historico de execucao armazena palavra-chave, quantidade de fontes, vagas e matches.
 4. Tentativas de candidatura podem ser listadas e inspecionadas pela CLI.
+5. Tentativas vindas do portal local podem registrar `visited_pages` e estagio do fluxo.
 
 ## 9. LLM e ranking
 
@@ -278,14 +281,14 @@ Definition of Done para novas features continua sendo:
 
 ## 11. Proximos passos recomendados
 
-A proxima etapa natural e endurecer a Fase 4 local com evidencias de erro e preparacao de seguranca antes de qualquer site real.
+A proxima etapa natural e endurecer o portal local com evidencias de erro e heuristicas de bloqueio antes de qualquer site real.
 
 Prioridade recomendada:
 
 1. Criar screenshots/traces em erro.
 2. Preparar detector de CAPTCHA/bloqueio antes de qualquer site real.
 3. Adicionar exportacao de relatorio de auditoria em JSON/Markdown.
-4. Normalizar respostas LLM no fluxo de busca mockada antes de fontes reais.
+4. Adicionar estados condicionais de formulario no portal local.
 
 ## 12. Regra de manutencao deste guia
 

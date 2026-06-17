@@ -8,7 +8,13 @@ from pathlib import Path
 import typer
 from loguru import logger
 
-from app.browser import BrowserAutomationError, apply_reviewed_form_page, fill_form_page, inspect_form_page
+from app.browser import (
+    BrowserAutomationError,
+    apply_reviewed_form_page,
+    fill_form_page,
+    inspect_form_flow,
+    inspect_form_page,
+)
 from app.config.settings import load_profile, load_settings
 from app.core.models import ApplicationStatus, ContractType, FieldInputType, JobPosting, RemoteType, Seniority
 from app.documents import ResumeError, parse_resume_pdf
@@ -232,6 +238,40 @@ def inspect_form(
         )
 
 
+@app.command("inspect-flow")
+def inspect_flow(
+    url: str = typer.Option(..., "--url", help="Local careers home or job page to inspect as a flow."),
+    settings: Path = typer.Option(Path("config/settings.yaml"), "--settings", "-s"),
+    screenshot: Path | None = typer.Option(None, "--screenshot", help="Optional screenshot output path."),
+) -> None:
+    """Inspect a local multi-step careers flow without submitting anything."""
+    loaded_settings = load_settings(settings)
+    try:
+        inspection = asyncio.run(
+            inspect_form_flow(
+                url=url,
+                headless=loaded_settings.runtime.headless,
+                screenshot_path=screenshot,
+            )
+        )
+    except BrowserAutomationError as exc:
+        typer.echo(f"Browser error: {exc}", err=True)
+        raise typer.Exit(code=1) from exc
+
+    typer.echo(f"Flow ended at: {inspection.url}")
+    typer.echo(f"Page type: {inspection.page_type}")
+    typer.echo(f"Visited pages: {len(inspection.visited_pages)}")
+    for visited in inspection.visited_pages:
+        typer.echo(f"- visited {visited}")
+    typer.echo(f"Submitted: {'yes' if inspection.submitted else 'no'}")
+    typer.echo(f"Submit selector: {inspection.submit_button_selector or '<not found>'}")
+    for field in inspection.fields:
+        typer.echo(
+            f"- {field.label or field.field_id} [{field.input_type}] "
+            f"name={field.html_name or '<none>'}"
+        )
+
+
 @app.command()
 def review(
     url: str = typer.Option(..., "--url", help="Local HTML file or URL to review."),
@@ -344,6 +384,9 @@ def review(
                 "resume_attached": draft.resume_attached,
                 "resume_path": draft.resume_path,
                 "attached_files": apply_result.attached_files,
+                "visited_pages": draft.visited_pages or apply_result.visited_pages,
+                "page_type": draft.page_type,
+                "flow_stage": apply_result.flow_stage,
                 "screenshot_path": draft.screenshot_path,
                 "risks": [*mapping.risks, *apply_result.risks],
             },
@@ -419,6 +462,8 @@ def fill_form(
                     field.model_dump(mode="json") for field in fill_result.pending_review_fields
                 ],
                 "screenshot_path": fill_result.screenshot_path,
+                "visited_pages": fill_result.visited_pages,
+                "flow_stage": fill_result.flow_stage,
                 "risks": fill_result.risks,
             },
         )

@@ -56,3 +56,30 @@ def test_form_mapper_marks_sensitive_fields_for_review() -> None:
     assert mapping.fields[0].mapped_profile_key == "answers.salary_expectation"
     assert mapping.fields[1].input_type == FieldInputType.CHECKBOX
     assert mapping.fields[1].requires_human_review is True
+
+
+def test_form_mapper_handles_more_realistic_field_labels() -> None:
+    profile = load_profile("config/profile.example.yaml")
+    inspection = FormInspectionResult(
+        url="file:///job_apply.html",
+        fields=[
+            RawFormField(
+                field_id="portfolio_link",
+                label="Portfolio ou profile link",
+                html_name="portfolio_link",
+                input_type="url",
+            ),
+            RawFormField(
+                field_id="region_hint",
+                label="Regiao de residencia",
+                html_name="region_hint",
+                input_type="text",
+            ),
+        ],
+    )
+
+    mapping = map_form_fields(inspection, profile)
+
+    assert mapping.fields[0].mapped_profile_key == "personal.portfolio"
+    assert mapping.fields[0].input_type == FieldInputType.URL
+    assert mapping.fields[1].requires_human_review is True

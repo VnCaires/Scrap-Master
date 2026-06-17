@@ -39,6 +39,8 @@ def map_form_fields(
         url=inspection.url,
         fields=mapped_fields,
         submit_button_selector=inspection.submit_button_selector,
+        visited_pages=inspection.visited_pages,
+        page_type=inspection.page_type,
         risks=risks,
         confidence=round(confidence, 4),
     )

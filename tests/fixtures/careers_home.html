@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8">
+    <title>Nebula Careers</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f4f1ea;
+        --surface: #ffffff;
+        --surface-alt: #ebe3d5;
+        --text: #1d2730;
+        --muted: #6a7680;
+        --line: #d8cdbd;
+        --accent: #0f766e;
+        --accent-soft: #d7f2ee;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: "Segoe UI", Arial, sans-serif;
+        background: linear-gradient(180deg, #f8f4ee 0%, #f0eadf 100%);
+        color: var(--text);
+      }
+
+      header,
+      main,
+      footer {
+        width: min(1180px, calc(100% - 32px));
+        margin: 0 auto;
+      }
+
+      header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 24px 0;
+      }
+
+      .brand {
+        font-size: 1.35rem;
+        font-weight: 700;
+      }
+
+      nav {
+        display: flex;
+        gap: 18px;
+        color: var(--muted);
+        font-size: 0.95rem;
+      }
+
+      .hero {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 24px;
+        padding: 28px 0 20px;
+      }
+
+      .hero-card,
+      .side-card,
+      .search-panel,
+      .job-card {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+      }
+
+      .hero-card {
+        padding: 28px;
+      }
+
+      .hero-card h1 {
+        margin: 0 0 12px;
+        font-size: 2.2rem;
+      }
+
+      .hero-card p {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.55;
+      }
+
+      .side-card {
+        padding: 20px;
+        background: linear-gradient(180deg, var(--accent-soft) 0%, #f7fffd 100%);
+      }
+
+      .search-layout {
+        display: grid;
+        grid-template-columns: 280px 1fr;
+        gap: 24px;
+        padding: 16px 0 40px;
+      }
+
+      .search-panel {
+        padding: 20px;
+      }
+
+      .search-panel h2,
+      .results h2 {
+        margin-top: 0;
+        font-size: 1.05rem;
+      }
+
+      .search-panel form {
+        display: grid;
+        gap: 14px;
+      }
+
+      .search-panel label {
+        display: grid;
+        gap: 6px;
+        font-size: 0.92rem;
+      }
+
+      .search-panel input,
+      .search-panel select {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        background: #fffdf9;
+      }
+
+      .search-panel .inline-check {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .results {
+        display: grid;
+        gap: 16px;
+      }
+
+      .job-card {
+        padding: 20px;
+        display: grid;
+        gap: 10px;
+      }
+
+      .job-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        color: var(--muted);
+        font-size: 0.92rem;
+      }
+
+      .job-card a {
+        width: fit-content;
+        color: var(--accent);
+        text-decoration: none;
+        font-weight: 600;
+      }
+
+      footer {
+        padding: 24px 0 40px;
+        color: var(--muted);
+        font-size: 0.92rem;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="brand">Nebula Careers</div>
+      <nav aria-label="Navegacao principal">
+        <span>Equipes</span>
+        <span>Locais</span>
+        <span>Beneficios</span>
+        <span>Minha conta</span>
+      </nav>
+    </header>
+
+    <main>
+      <section class="hero">
+        <article class="hero-card">
+          <p>Portal de carreiras</p>
+          <h1>Construa produtos que ajudam times a decidir melhor</h1>
+          <p>
+            Explore vagas em dados, produto, engenharia e operacoes. Esta fixture existe para
+            testar navegacao, seletores e formularios mais parecidos com portais reais.
+          </p>
+        </article>
+        <aside class="side-card">
+          <p><strong>Agora com fluxo local multi-step</strong></p>
+          <p>Busca, detalhe da vaga e candidatura, tudo sem submit.</p>
+        </aside>
+      </section>
+
+      <section class="search-layout">
+        <aside class="search-panel">
+          <h2>Refinar busca</h2>
+          <form id="search-form">
+            <label for="keyword_search">
+              Palavra-chave
+              <input id="keyword_search" name="keyword_search" type="search" placeholder="Dados, Python, BI">
+            </label>
+            <label for="city_filter">
+              Cidade ou regiao
+              <input id="city_filter" name="city_filter" type="text" placeholder="Salvador, remoto, Sao Paulo">
+            </label>
+            <label for="job_family">
+              Area
+              <select id="job_family" name="job_family">
+                <option value="">Todas</option>
+                <option value="data">Dados</option>
+                <option value="product">Produto</option>
+                <option value="engineering">Engenharia</option>
+              </select>
+            </label>
+            <label class="inline-check">
+              <input id="remote_only" name="remote_only" type="checkbox">
+              Mostrar somente vagas remotas
+            </label>
+          </form>
+        </aside>
+
+        <div class="results">
+          <h2>Vagas em destaque</h2>
+
+          <article class="job-card">
+            <div class="job-meta">
+              <span>Dados</span>
+              <span>Salvador, BA</span>
+              <span>Hibrido</span>
+            </div>
+            <h3>Analista de Dados Pleno</h3>
+            <p>
+              Trabalhe com indicadores operacionais, SQL, Python e modelos analiticos para apoiar
+              times de produto e negocio.
+            </p>
+            <a id="job_detail_link" href="job_detail.html">Ver detalhes da vaga</a>
+          </article>
+
+          <article class="job-card">
+            <div class="job-meta">
+              <span>Produto</span>
+              <span>Remoto</span>
+              <span>Senior</span>
+            </div>
+            <h3>Product Analytics Specialist</h3>
+            <p>
+              Estruture metricas de ativacao, retencao e comportamento de usuarios em times
+              multifuncionais.
+            </p>
+            <a href="job_detail.html#related-role">Explorar vaga parecida</a>
+          </article>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      Fixture local para testes do Scrap Master. Nenhum formulario envia dados para fora.
+    </footer>
+  </body>
+</html>

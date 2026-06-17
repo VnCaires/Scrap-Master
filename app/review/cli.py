@@ -11,6 +11,8 @@ class ReviewDraft(BaseModel):
     status: ApplicationStatus = ApplicationStatus.NEEDS_REVIEW
     fields: list[FormField] = Field(default_factory=list)
     edited_fields: list[FormField] = Field(default_factory=list)
+    visited_pages: list[str] = Field(default_factory=list)
+    page_type: str = "apply_form"
     risks: list[str] = Field(default_factory=list)
     resume_attached: bool = False
     resume_path: str | None = None
@@ -22,6 +24,8 @@ def build_review_draft(mapping: FormMappingResult) -> ReviewDraft:
     return ReviewDraft(
         url=mapping.url,
         fields=mapping.fields,
+        visited_pages=mapping.visited_pages,
+        page_type=mapping.page_type,
         risks=mapping.risks,
         submitted=False,
     )
@@ -30,11 +34,13 @@ def build_review_draft(mapping: FormMappingResult) -> ReviewDraft:
 def render_review_draft(draft: ReviewDraft) -> str:
     lines = [
         f"Review draft for: {draft.url}",
+        f"Page type: {draft.page_type}",
         f"Status: {draft.status.value}",
         "Submitted: no",
-        "",
-        "Fields:",
     ]
+    if draft.visited_pages:
+        lines.append(f"Visited pages: {len(draft.visited_pages)}")
+    lines.extend(["", "Fields:"])
     for field in draft.fields:
         proposed = field.proposed_value if field.proposed_value else "<empty>"
         review = "yes" if field.requires_human_review else "no"

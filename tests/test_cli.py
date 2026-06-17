@@ -83,7 +83,7 @@ def test_cli_inspect_form_and_review(tmp_path) -> None:
             "--settings",
             str(settings),
             "--url",
-            "tests/fixtures/job_form.html",
+            "tests/fixtures/job_apply.html",
             "--decision",
             "approve",
         ],
@@ -132,6 +132,35 @@ def test_cli_inspect_form_and_review(tmp_path) -> None:
     assert '"submitted": false' in attempt_show_result.output
 
 
+def test_cli_inspect_flow(tmp_path) -> None:
+    import asyncio
+    import pytest
+
+    try:
+        asyncio.run(inspect_form_page("tests/fixtures/job_apply.html", headless=True))
+    except BrowserAutomationError as exc:
+        pytest.skip(str(exc))
+
+    settings = write_settings(tmp_path)
+    runner = CliRunner()
+
+    result = runner.invoke(
+        app,
+        [
+            "inspect-flow",
+            "--settings",
+            str(settings),
+            "--url",
+            "tests/fixtures/careers_home.html",
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert "Visited pages: 3" in result.output
+    assert "Page type: apply_form" in result.output
+    assert "job_apply.html" in result.output
+
+
 def test_cli_parse_resume_writes_output(tmp_path) -> None:
     from tests.helpers import write_pdf_with_text
 
@@ -175,7 +204,7 @@ def test_cli_fill_form(tmp_path) -> None:
             "--settings",
             str(settings),
             "--url",
-            "tests/fixtures/job_form.html",
+            "tests/fixtures/job_apply.html",
             "--screenshot",
             str(tmp_path / "filled-form.png"),
         ],

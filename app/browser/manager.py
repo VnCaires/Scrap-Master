@@ -29,6 +29,7 @@ async def inspect_form_page(
             browser = await playwright.chromium.launch(headless=headless)
             page = await browser.new_page()
             await page.goto(target_url, wait_until="domcontentloaded")
+            page_type = await page.evaluate(_PAGE_TYPE_SCRIPT)
             fields = await page.evaluate(_FORM_FIELD_SCRIPT)
             submit_selector = await page.evaluate(_SUBMIT_SELECTOR_SCRIPT)
             if screenshot_path:
@@ -44,7 +45,69 @@ async def inspect_form_page(
         url=target_url,
         fields=[RawFormField.model_validate(field) for field in fields],
         submit_button_selector=submit_selector,
+        visited_pages=[target_url],
+        page_type=page_type,
         risks=["Inspection mode only; no submit action was performed."],
+        submitted=False,
+    )
+
+
+async def inspect_form_flow(
+    url: str | Path,
+    headless: bool = True,
+    screenshot_path: str | Path | None = None,
+) -> FormInspectionResult:
+    try:
+        from playwright.async_api import async_playwright
+    except ImportError as exc:
+        raise BrowserAutomationError(
+            "Playwright is not installed. Install browser dependencies with: "
+            "python -m pip install -e \".[browser]\""
+        ) from exc
+
+    if _is_remote_url(url):
+        raise BrowserAutomationError("flow inspection is only allowed for local files in this phase")
+
+    target_url = _to_browser_url(url)
+    visited_pages: list[str] = []
+    try:
+        async with async_playwright() as playwright:
+            browser = await playwright.chromium.launch(headless=headless)
+            page = await browser.new_page()
+            await page.goto(target_url, wait_until="domcontentloaded")
+            visited_pages.append(page.url)
+
+            detail_link = page.locator("#job_detail_link")
+            if await detail_link.count():
+                await detail_link.first.click()
+                await page.wait_for_load_state("domcontentloaded")
+                visited_pages.append(page.url)
+
+            apply_link = page.locator("#apply_now_link")
+            if await apply_link.count():
+                await apply_link.first.click()
+                await page.wait_for_load_state("domcontentloaded")
+                visited_pages.append(page.url)
+
+            page_type = await page.evaluate(_PAGE_TYPE_SCRIPT)
+            fields = await page.evaluate(_FORM_FIELD_SCRIPT)
+            submit_selector = await page.evaluate(_SUBMIT_SELECTOR_SCRIPT)
+            if screenshot_path:
+                await page.screenshot(path=str(screenshot_path), full_page=True)
+            await browser.close()
+    except Exception as exc:
+        raise BrowserAutomationError(
+            "Playwright could not inspect the local flow. If browsers are missing, run: "
+            "python -m playwright install chromium"
+        ) from exc
+
+    return FormInspectionResult(
+        url=page.url if visited_pages else target_url,
+        fields=[RawFormField.model_validate(field) for field in fields],
+        submit_button_selector=submit_selector,
+        visited_pages=visited_pages or [target_url],
+        page_type=page_type,
+        risks=["Flow inspection mode only; no submit action was performed."],
         submitted=False,
     )
 
@@ -96,6 +159,8 @@ async def fill_form_page(
         filled_fields=autofill_fields,
         pending_review_fields=pending_review_fields,
         attached_files=[],
+        visited_pages=[target_url],
+        flow_stage="apply_form",
         screenshot_path=str(screenshot_path) if screenshot_path else None,
         submitted=False,
         risks=["Autofill mode only; submit was not triggered."],
@@ -145,6 +210,7 @@ async def apply_reviewed_form_page(
             browser = await playwright.chromium.launch(headless=headless)
             page = await browser.new_page()
             await page.goto(target_url, wait_until="domcontentloaded")
+            visited_pages = [page.url]
             for field in filled_fields:
                 locator = page.locator(field.target_selector)
                 if field.input_type == FieldInputType.SELECT:
@@ -170,6 +236,8 @@ async def apply_reviewed_form_page(
         filled_fields=filled_fields,
         pending_review_fields=pending_review_fields,
         attached_files=attached_files,
+        visited_pages=visited_pages,
+        flow_stage="apply_form",
         screenshot_path=str(screenshot_path) if screenshot_path else None,
         submitted=False,
         risks=["Reviewed local application only; submit was not triggered."],
@@ -237,6 +305,19 @@ _FORM_FIELD_SCRIPT = """
           ? `${el.tagName.toLowerCase()}[name="${CSS.escape(el.getAttribute('name'))}"]`
           : null)
   }));
+}
+"""
+
+_PAGE_TYPE_SCRIPT = """
+() => {
+  const path = window.location.pathname.toLowerCase();
+  if (path.includes('apply')) return 'apply_form';
+  if (path.includes('detail')) return 'job_detail';
+  if (path.includes('career') || path.includes('home')) return 'job_list';
+  if (document.querySelector('form#application-form')) return 'apply_form';
+  if (document.querySelector('#apply_now_link')) return 'job_detail';
+  if (document.querySelector('#job_detail_link')) return 'job_list';
+  return 'unknown';
 }
 """
 

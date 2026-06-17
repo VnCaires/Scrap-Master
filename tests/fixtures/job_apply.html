@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8">
+    <title>Candidatura local - Analista de Dados Pleno</title>
+    <style>
+      :root {
+        --bg: #f5efe5;
+        --surface: #ffffff;
+        --surface-alt: #f8f6f0;
+        --line: #dbcdb8;
+        --text: #17232d;
+        --muted: #67737f;
+        --accent: #0f766e;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: "Segoe UI", Arial, sans-serif;
+        background: linear-gradient(180deg, #faf6ef 0%, #f2eadc 100%);
+        color: var(--text);
+      }
+
+      .shell {
+        width: min(1120px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 24px 0 40px;
+      }
+
+      .breadcrumbs {
+        display: flex;
+        gap: 8px;
+        color: var(--muted);
+        font-size: 0.92rem;
+      }
+
+      .layout {
+        display: grid;
+        grid-template-columns: 1.65fr 0.95fr;
+        gap: 24px;
+        margin-top: 18px;
+      }
+
+      .panel,
+      .sidebar-card {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+      }
+
+      .panel {
+        padding: 24px;
+      }
+
+      .section-block {
+        border: 1px solid var(--line);
+        background: var(--surface-alt);
+        border-radius: 8px;
+        padding: 18px;
+        margin-bottom: 18px;
+      }
+
+      .section-block h2 {
+        margin-top: 0;
+        font-size: 1.05rem;
+      }
+
+      .field-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px 16px;
+      }
+
+      .field-grid label,
+      .stack label {
+        display: grid;
+        gap: 6px;
+        font-size: 0.93rem;
+      }
+
+      input,
+      textarea,
+      select {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        background: #fffdfa;
+        font: inherit;
+      }
+
+      textarea {
+        min-height: 110px;
+        resize: vertical;
+      }
+
+      .stack {
+        display: grid;
+        gap: 14px;
+      }
+
+      .sidebar {
+        display: grid;
+        gap: 16px;
+      }
+
+      .sidebar-card {
+        padding: 18px;
+      }
+
+      .inline-check {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        font-size: 0.92rem;
+      }
+
+      .full-row {
+        grid-column: 1 / -1;
+      }
+
+      button {
+        padding: 12px 16px;
+        border: 0;
+        border-radius: 6px;
+        background: var(--accent);
+        color: white;
+        font-weight: 600;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <nav class="breadcrumbs" aria-label="Breadcrumb">
+        <a href="careers_home.html">Vagas</a>
+        <span>/</span>
+        <a href="job_detail.html">Analista de Dados Pleno</a>
+        <span>/</span>
+        <span>Candidatura</span>
+      </nav>
+
+      <div class="layout">
+        <main class="panel">
+          <h1>Enviar candidatura local</h1>
+          <p>
+            Esta pagina simula um portal de candidatura mais realista, com seções, campos
+            auxiliares e terminologia menos uniforme.
+          </p>
+
+          <form id="application-form" action="/submit" method="post" enctype="multipart/form-data">
+            <section class="section-block">
+              <h2>Dados do perfil</h2>
+              <div class="field-grid">
+                <label for="candidate_name">
+                  Nome completo
+                  <input id="candidate_name" name="candidate_name" type="text" autocomplete="name">
+                </label>
+
+                <label for="contact_email">
+                  E-mail principal
+                  <input id="contact_email" name="contact_email" type="email" autocomplete="email">
+                </label>
+
+                <label for="mobile_phone">
+                  Telefone celular
+                  <input id="mobile_phone" name="mobile_phone" type="tel" autocomplete="tel">
+                </label>
+
+                <label for="preferred_city">
+                  Cidade atual
+                  <input id="preferred_city" name="preferred_city" type="text" placeholder="Cidade onde voce mora hoje">
+                </label>
+
+                <label for="region_hint">
+                  Regiao de residencia
+                  <input id="region_hint" name="region_hint" type="text" placeholder="Ex.: Nordeste, Sudeste">
+                </label>
+
+                <label for="portfolio_link">
+                  Portfolio ou profile link
+                  <input id="portfolio_link" name="portfolio_link" type="url" placeholder="https://">
+                </label>
+
+                <label for="linkedin_profile">
+                  Perfil do LinkedIn
+                  <input id="linkedin_profile" name="linkedin_profile" type="url" placeholder="https://linkedin.com/in/...">
+                </label>
+
+                <label for="github_profile">
+                  Perfil do GitHub
+                  <input id="github_profile" name="github_profile" type="url" placeholder="https://github.com/...">
+                </label>
+              </div>
+            </section>
+
+            <section class="section-block">
+              <h2>Documentos e disponibilidade</h2>
+              <div class="stack">
+                <label for="resume_upload">
+                  Curriculo em PDF
+                  <input id="resume_upload" name="resume_upload" type="file" accept="application/pdf">
+                </label>
+
+                <label for="salary_expectation">
+                  Pretensao salarial para a vaga
+                  <input id="salary_expectation" name="salary_expectation" type="text" placeholder="Ex.: 9000 CLT">
+                </label>
+
+                <label for="work_region_authorization">
+                  Autorizacao para trabalhar nesta regiao
+                  <select id="work_region_authorization" name="work_region_authorization">
+                    <option value="">Selecione</option>
+                    <option value="brasil">Autorizado a trabalhar no Brasil</option>
+                    <option value="sponsor">Preciso de patrocinio</option>
+                  </select>
+                </label>
+              </div>
+            </section>
+
+            <section class="section-block">
+              <h2>Perguntas adicionais</h2>
+              <div class="stack">
+                <label for="motivation_note">
+                  Carta de apresentacao ou contexto adicional
+                  <textarea id="motivation_note" name="motivation_note"></textarea>
+                </label>
+
+                <label class="inline-check">
+                  <input id="privacy_terms" name="privacy_terms" type="checkbox">
+                  Concordo com os termos de privacidade e com o uso dos meus dados para esta candidatura.
+                </label>
+              </div>
+            </section>
+
+            <button type="submit" id="submit_application">Enviar candidatura</button>
+          </form>
+        </main>
+
+        <aside class="sidebar">
+          <section class="sidebar-card">
+            <h2>Resumo da vaga</h2>
+            <p><strong>Analista de Dados Pleno</strong></p>
+            <p>Salvador, BA</p>
+            <p>Hibrido</p>
+          </section>
+
+          <section class="sidebar-card">
+            <h2>Checklist local</h2>
+            <p>Curriculo em PDF</p>
+            <p>Dados de contato atualizados</p>
+            <p>Revisao humana obrigatoria</p>
+          </section>
+        </aside>
+      </div>
+    </div>
+  </body>
+</html>
