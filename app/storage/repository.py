@@ -60,6 +60,18 @@ def list_job_posting_records(session: Session) -> list[JobPostingRecord]:
     return list(session.exec(select(JobPostingRecord)).all())
 
 
+def list_application_attempt_records(session: Session) -> list[ApplicationAttemptRecord]:
+    statement = select(ApplicationAttemptRecord).order_by(ApplicationAttemptRecord.created_at.desc())
+    return list(session.exec(statement).all())
+
+
+def get_application_attempt_record(
+    session: Session,
+    attempt_id: int,
+) -> ApplicationAttemptRecord | None:
+    return session.get(ApplicationAttemptRecord, attempt_id)
+
+
 def save_job_match(
     session: Session,
     job_record: JobPostingRecord,

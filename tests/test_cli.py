@@ -1,5 +1,8 @@
+import json
+
 from typer.testing import CliRunner
 from sqlmodel import Session, select
+import yaml
 
 from app.browser import BrowserAutomationError, inspect_form_page
 from app.cli.main import app
@@ -98,6 +101,59 @@ def test_cli_inspect_form_and_review(tmp_path) -> None:
     assert len(attempts) == 1
     assert attempts[0].status == "approved"
     assert attempts[0].submitted_at is None
+    result_payload = json.loads(attempts[0].result_json or "{}")
+    assert result_payload["submitted"] is False
+    assert result_payload["resume_attached"] is True
+    assert result_payload["attached_files"]
+
+    attempts_result = runner.invoke(
+        app,
+        [
+            "attempts",
+            "--settings",
+            str(settings),
+        ],
+    )
+    attempt_show_result = runner.invoke(
+        app,
+        [
+            "attempt-show",
+            "1",
+            "--settings",
+            str(settings),
+        ],
+    )
+
+    assert attempts_result.exit_code == 0
+    assert "#1" in attempts_result.output
+    assert "approved" in attempts_result.output
+    assert attempt_show_result.exit_code == 0
+    assert "Application attempt #1" in attempt_show_result.output
+    assert '"submitted": false' in attempt_show_result.output
+
+
+def test_cli_parse_resume_writes_output(tmp_path) -> None:
+    from tests.helpers import write_pdf_with_text
+
+    runner = CliRunner()
+    resume = tmp_path / "resume.pdf"
+    output = tmp_path / "resume_parsed.txt"
+    write_pdf_with_text(resume, "Python LLM Resume")
+
+    result = runner.invoke(
+        app,
+        [
+            "parse-resume",
+            "--pdf",
+            str(resume),
+            "--output",
+            str(output),
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert "Extracted text saved:" in result.output
+    assert "Python" in output.read_text(encoding="utf-8")
 
 
 def test_cli_fill_form(tmp_path) -> None:
@@ -137,3 +193,34 @@ def test_cli_fill_form(tmp_path) -> None:
     assert len(attempts) == 1
     assert attempts[0].status == "needs_review"
     assert attempts[0].submitted_at is None
+
+
+def test_cli_review_rejects_missing_resume(tmp_path) -> None:
+    import asyncio
+    import pytest
+
+    try:
+        asyncio.run(inspect_form_page("tests/fixtures/job_form.html", headless=True))
+    except BrowserAutomationError as exc:
+        pytest.skip(str(exc))
+
+    settings = write_settings(tmp_path)
+    settings_data = yaml.safe_load(settings.read_text(encoding="utf-8"))
+    settings_data["resume_pdf_path"] = str(tmp_path / "missing.pdf")
+    settings.write_text(yaml.safe_dump(settings_data), encoding="utf-8")
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "review",
+            "--settings",
+            str(settings),
+            "--url",
+            "tests/fixtures/job_form.html",
+            "--decision",
+            "approve",
+        ],
+    )
+
+    assert result.exit_code == 1
+    assert "Resume error:" in result.output

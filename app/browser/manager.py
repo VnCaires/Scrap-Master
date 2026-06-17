@@ -64,13 +64,14 @@ async def fill_form_page(
         ) from exc
 
     target_url = _to_browser_url(url)
+    safe_input_types = {FieldInputType.TEXT, FieldInputType.EMAIL, FieldInputType.TEL, FieldInputType.URL}
     autofill_fields = [
         field
         for field in fields
         if not field.requires_human_review
         and field.proposed_value
         and field.target_selector
-        and field.input_type in {FieldInputType.TEXT, FieldInputType.EMAIL, FieldInputType.TEL}
+        and field.input_type in safe_input_types
     ]
     pending_review_fields = [field for field in fields if field not in autofill_fields]
 
@@ -94,9 +95,84 @@ async def fill_form_page(
         url=target_url,
         filled_fields=autofill_fields,
         pending_review_fields=pending_review_fields,
+        attached_files=[],
         screenshot_path=str(screenshot_path) if screenshot_path else None,
         submitted=False,
         risks=["Autofill mode only; submit was not triggered."],
+    )
+
+
+async def apply_reviewed_form_page(
+    url: str | Path,
+    fields: list[FormField],
+    edited_field_ids: set[str] | None = None,
+    resume_pdf_path: str | Path | None = None,
+    headless: bool = True,
+    screenshot_path: str | Path | None = None,
+) -> FormFillResult:
+    try:
+        from playwright.async_api import async_playwright
+    except ImportError as exc:
+        raise BrowserAutomationError(
+            "Playwright is not installed. Install browser dependencies with: "
+            "python -m pip install -e \".[browser]\""
+        ) from exc
+
+    if _is_remote_url(url):
+        raise BrowserAutomationError("review application is only allowed for local files in this phase")
+
+    target_url = _to_browser_url(url)
+    edited_field_ids = edited_field_ids or set()
+    filled_fields = [
+        field
+        for field in fields
+        if field.proposed_value
+        and field.target_selector
+        and _can_fill_text_field(field, edited_field_ids)
+    ]
+    file_fields = [
+        field
+        for field in fields
+        if field.input_type == FieldInputType.FILE and field.target_selector and resume_pdf_path
+    ]
+    attached_files = [str(resume_pdf_path)] if file_fields and resume_pdf_path else []
+    applied_field_ids = {field.field_id for field in filled_fields}
+    applied_field_ids.update(field.field_id for field in file_fields)
+    pending_review_fields = [field for field in fields if field.field_id not in applied_field_ids]
+
+    try:
+        async with async_playwright() as playwright:
+            browser = await playwright.chromium.launch(headless=headless)
+            page = await browser.new_page()
+            await page.goto(target_url, wait_until="domcontentloaded")
+            for field in filled_fields:
+                locator = page.locator(field.target_selector)
+                if field.input_type == FieldInputType.SELECT:
+                    try:
+                        await locator.select_option(value=field.proposed_value)
+                    except Exception:
+                        await locator.select_option(label=field.proposed_value)
+                else:
+                    await locator.fill(field.proposed_value or "")
+            for field in file_fields:
+                await page.locator(field.target_selector).set_input_files(str(resume_pdf_path))
+            if screenshot_path:
+                await page.screenshot(path=str(screenshot_path), full_page=True)
+            await browser.close()
+    except Exception as exc:
+        raise BrowserAutomationError(
+            "Playwright could not apply the reviewed local form. If browsers are missing, run: "
+            "python -m playwright install chromium"
+        ) from exc
+
+    return FormFillResult(
+        url=target_url,
+        filled_fields=filled_fields,
+        pending_review_fields=pending_review_fields,
+        attached_files=attached_files,
+        screenshot_path=str(screenshot_path) if screenshot_path else None,
+        submitted=False,
+        risks=["Reviewed local application only; submit was not triggered."],
     )
 
 
@@ -109,6 +185,25 @@ def _to_browser_url(url: str | Path) -> str:
     if not path.is_absolute():
         path = Path.cwd() / path
     return path.resolve().as_uri()
+
+
+def _is_remote_url(url: str | Path) -> bool:
+    return str(url).startswith(("http://", "https://"))
+
+
+def _can_fill_text_field(field: FormField, edited_field_ids: set[str]) -> bool:
+    if not field.proposed_value:
+        return False
+    if field.input_type not in {
+        FieldInputType.TEXT,
+        FieldInputType.EMAIL,
+        FieldInputType.TEL,
+        FieldInputType.URL,
+        FieldInputType.TEXTAREA,
+        FieldInputType.SELECT,
+    }:
+        return False
+    return not field.requires_human_review or field.field_id in edited_field_ids
 
 
 _FORM_FIELD_SCRIPT = """

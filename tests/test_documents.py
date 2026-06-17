@@ -5,6 +5,7 @@ from pypdf import PdfWriter
 from pypdf.generic import DecodedStreamObject, DictionaryObject, NameObject
 
 from app.documents import ResumeError, parse_resume_pdf
+from app.documents.resume import _normalize_extracted_text
 
 
 def test_parse_resume_pdf_extracts_text(tmp_path: Path) -> None:
@@ -15,6 +16,28 @@ def test_parse_resume_pdf_extracts_text(tmp_path: Path) -> None:
 
     assert parsed.page_count == 1
     assert "Python" in parsed.text
+
+
+def test_parse_resume_pdf_writes_extracted_text(tmp_path: Path) -> None:
+    pdf_path = tmp_path / "resume.pdf"
+    output_path = tmp_path / "output" / "resume.txt"
+    _write_pdf_with_text(pdf_path, "Python LLM Resume")
+
+    parsed = parse_resume_pdf(pdf_path, output_text_path=output_path)
+
+    assert parsed.extracted_text_path == output_path
+    assert "Python" in output_path.read_text(encoding="utf-8")
+
+
+def test_normalize_extracted_text_fixes_brazilian_mojibake_and_diacritics() -> None:
+    broken = "Cientista da ComputaÂ¸ cËœ ao\n+55 71 â€” Salvador\nInglË† es\nFORMAC Â¸ÃƒO"
+
+    normalized = _normalize_extracted_text(broken)
+
+    assert "Computação" in normalized
+    assert "—" in normalized
+    assert "Inglês" in normalized
+    assert "FORMAÇÃO" in normalized
 
 
 def test_parse_resume_pdf_rejects_missing_file(tmp_path: Path) -> None:

@@ -40,6 +40,7 @@ class FieldInputType(StrEnum):
     TEXT = "text"
     EMAIL = "email"
     TEL = "tel"
+    URL = "url"
     TEXTAREA = "textarea"
     SELECT = "select"
     RADIO = "radio"

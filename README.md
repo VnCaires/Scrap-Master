@@ -10,12 +10,12 @@ This repository currently implements only the project base:
 - Loguru logging.
 - Example settings and profile files.
 - SQLModel + SQLite persistence.
-- Resume PDF validation and text extraction.
+- Resume PDF validation, PT-BR-aware text normalization, and extraction to a local text artifact.
 - Mock and OpenAI-compatible LLM clients.
 - Explainable local ranking.
 - Safe local Playwright form inspection.
 - Safe local Playwright autofill for non-sensitive fields.
-- CLI review drafts that never submit applications.
+- Editable CLI review drafts with local resume upload that never submit applications.
 - A mock job source for validating the flow without real scraping.
 
 Real scraping, real-site form filling, and application submission are not
@@ -48,12 +48,17 @@ scrap-master init-db --settings config/settings.yaml
 scrap-master config-check --settings config/settings.yaml
 scrap-master validate-profile --profile config/profile.yaml
 scrap-master parse-resume --pdf data/input/resume.pdf
+scrap-master parse-resume --pdf data/input/resume.pdf --output data/output/resume_parsed.txt
 scrap-master search --keyword "Python LLM" --limit 5
 scrap-master rank --keyword "Python LLM"
 scrap-master run --keyword "Machine Learning Engineer" --limit 10
 scrap-master inspect-form --url tests/fixtures/job_form.html
 scrap-master fill-form --url tests/fixtures/job_form.html
 scrap-master review --url tests/fixtures/job_form.html
+scrap-master review --url tests/fixtures/job_form.html --decision draft
+scrap-master review --url tests/fixtures/job_form.html --screenshot data/output/reviewed-form.png
+scrap-master attempts
+scrap-master attempt-show 1
 ```
 
 The current `run` flow initializes the SQLite database, searches enabled
@@ -61,8 +66,12 @@ sources, persists deduplicated jobs, ranks them, stores matches, and stops
 before any browser automation.
 
 The current form flow only works against local/test pages. It can inspect fields,
-autofill only safe fields, prepare a review draft, and persist the review
-decision, but it never clicks a submit button.
+autofill only safe fields, attach a validated local resume PDF during review,
+let the CLI user edit pending values, and persist the review decision, but it
+never clicks a submit button.
+
+Application attempts can be audited from the CLI with `scrap-master attempts`
+and `scrap-master attempt-show <id>`.
 
 ## Safety Defaults
 

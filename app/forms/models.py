@@ -34,6 +34,7 @@ class FormFillResult(BaseModel):
     url: str
     filled_fields: list[FormField] = Field(default_factory=list)
     pending_review_fields: list[FormField] = Field(default_factory=list)
+    attached_files: list[str] = Field(default_factory=list)
     screenshot_path: str | None = None
     submitted: bool = False
     risks: list[str] = Field(default_factory=list)

@@ -8,7 +8,9 @@ from app.storage.models import (
     RunHistoryRecord,
 )
 from app.storage.repository import (
+    get_application_attempt_record,
     job_from_record,
+    list_application_attempt_records,
     list_job_posting_records,
     list_job_postings,
     save_application_attempt,
@@ -23,8 +25,10 @@ __all__ = [
     "JobPostingRecord",
     "RunHistoryRecord",
     "create_db_engine",
+    "get_application_attempt_record",
     "init_database",
     "job_from_record",
+    "list_application_attempt_records",
     "list_job_posting_records",
     "list_job_postings",
     "save_job_match",

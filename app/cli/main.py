@@ -8,19 +8,21 @@ from pathlib import Path
 import typer
 from loguru import logger
 
-from app.browser import BrowserAutomationError, fill_form_page, inspect_form_page
+from app.browser import BrowserAutomationError, apply_reviewed_form_page, fill_form_page, inspect_form_page
 from app.config.settings import load_profile, load_settings
-from app.core.models import ApplicationStatus, ContractType, JobPosting, RemoteType, Seniority
+from app.core.models import ApplicationStatus, ContractType, FieldInputType, JobPosting, RemoteType, Seniority
 from app.documents import ResumeError, parse_resume_pdf
-from app.forms import map_form_fields
+from app.forms import FormFillResult, map_form_fields
 from app.llm import CompatibilityEvaluation, create_llm_client
 from app.observability import configure_logging
 from app.ranking import rank_jobs
-from app.review import build_review_draft, normalize_review_decision, render_review_draft
+from app.review import apply_field_edits, build_review_draft, normalize_review_decision, render_review_draft
 from app.security import mask_email, mask_name
 from app.sources import get_enabled_source_adapters
 from app.storage import (
+    get_application_attempt_record,
     init_database,
+    list_application_attempt_records,
     job_from_record,
     list_job_posting_records,
     save_application_attempt,
@@ -108,10 +110,16 @@ def validate_profile(
 def parse_resume(
     pdf: Path = typer.Option(..., "--pdf", help="Path to resume PDF."),
     max_size_mb: int = typer.Option(5, "--max-size-mb", min=1),
+    output: Path | None = typer.Option(
+        Path("data/output/resume_parsed.txt"),
+        "--output",
+        "-o",
+        help="Path to write extracted resume text.",
+    ),
 ) -> None:
-    """Validate and extract text from a resume PDF."""
+    """Validate, extract, and optionally save text from a resume PDF."""
     try:
-        parsed = parse_resume_pdf(pdf, max_size_mb=max_size_mb)
+        parsed = parse_resume_pdf(pdf, max_size_mb=max_size_mb, output_text_path=output)
     except ResumeError as exc:
         logger.warning("Resume parsing failed: {}", exc)
         typer.echo(f"Resume error: {exc}", err=True)
@@ -122,6 +130,8 @@ def parse_resume(
         f"Resume OK: {parsed.page_count} page(s), {parsed.size_bytes} bytes, "
         f"{len(parsed.text)} extracted characters"
     )
+    if parsed.extracted_text_path:
+        typer.echo(f"Extracted text saved: {parsed.extracted_text_path}")
 
 
 @app.command()
@@ -227,6 +237,11 @@ def review(
     url: str = typer.Option(..., "--url", help="Local HTML file or URL to review."),
     profile: Path | None = typer.Option(None, "--profile", "-p", help="Path to profile YAML."),
     settings: Path = typer.Option(Path("config/settings.yaml"), "--settings", "-s"),
+    screenshot: Path | None = typer.Option(
+        None,
+        "--screenshot",
+        help="Optional screenshot path for the reviewed local form.",
+    ),
     decision: str | None = typer.Option(
         None,
         "--decision",
@@ -254,12 +269,55 @@ def review(
     draft = build_review_draft(mapping)
     typer.echo(render_review_draft(draft))
 
+    edits = _collect_review_edits(draft, interactive=decision is None)
+    if edits:
+        draft = apply_field_edits(draft, edits)
+        typer.echo(f"Edited fields: {', '.join(edits.keys())}")
+
     chosen = decision or typer.prompt("Decision [approve/skip/draft]", default="draft")
     try:
         status = normalize_review_decision(chosen)
     except ValueError as exc:
         typer.echo(str(exc), err=True)
         raise typer.Exit(code=1) from exc
+
+    parsed_resume_path: str | None = None
+    if status == ApplicationStatus.SKIPPED:
+        apply_result = FormFillResult(
+            url=inspection.url,
+            pending_review_fields=draft.fields,
+            submitted=False,
+            risks=["Review was skipped; no local form changes were applied."],
+        )
+    else:
+        if any(field.input_type == FieldInputType.FILE for field in draft.fields):
+            try:
+                parsed_resume = parse_resume_pdf(loaded_settings.resume_pdf_path)
+                parsed_resume_path = str(parsed_resume.pdf_path)
+                draft = draft.model_copy(
+                    update={"resume_attached": True, "resume_path": parsed_resume_path}
+                )
+            except ResumeError as exc:
+                logger.warning("Resume validation failed during review: {}", exc)
+                typer.echo(f"Resume error: {exc}", err=True)
+                raise typer.Exit(code=1) from exc
+
+        try:
+            apply_result = asyncio.run(
+                apply_reviewed_form_page(
+                    url=url,
+                    fields=draft.fields,
+                    edited_field_ids=set(edits),
+                    resume_pdf_path=parsed_resume_path,
+                    headless=loaded_settings.runtime.headless,
+                    screenshot_path=screenshot,
+                )
+            )
+        except BrowserAutomationError as exc:
+            typer.echo(f"Browser error: {exc}", err=True)
+            raise typer.Exit(code=1) from exc
+
+    draft = draft.model_copy(update={"screenshot_path": apply_result.screenshot_path})
 
     with session_scope(loaded_settings.storage.database_url) as session:
         job_record = save_job_postings(session, [_local_form_job(inspection.url)])[0]
@@ -272,8 +330,22 @@ def review(
                 "url": inspection.url,
                 "status": status.value,
                 "submitted": False,
-                "fields": [field.model_dump(mode="json") for field in mapping.fields],
-                "risks": mapping.risks,
+                "fields": [field.model_dump(mode="json") for field in draft.fields],
+                "edited_fields": [
+                    field.model_dump(mode="json") for field in draft.edited_fields
+                ],
+                "filled_fields": [
+                    field.model_dump(mode="json") for field in apply_result.filled_fields
+                ],
+                "pending_review_fields": [
+                    field.model_dump(mode="json")
+                    for field in apply_result.pending_review_fields
+                ],
+                "resume_attached": draft.resume_attached,
+                "resume_path": draft.resume_path,
+                "attached_files": apply_result.attached_files,
+                "screenshot_path": draft.screenshot_path,
+                "risks": [*mapping.risks, *apply_result.risks],
             },
         )
 
@@ -357,6 +429,59 @@ def fill_form(
     )
 
 
+@app.command("attempts")
+def attempts(
+    settings: Path = typer.Option(Path("config/settings.yaml"), "--settings", "-s"),
+    limit: int = typer.Option(10, "--limit", "-l", min=1),
+) -> None:
+    """List persisted application attempts for local audit."""
+    loaded_settings = load_settings(settings)
+    init_database(loaded_settings.storage.database_url)
+
+    with session_scope(loaded_settings.storage.database_url) as session:
+        records = list_application_attempt_records(session)[:limit]
+
+    if not records:
+        typer.echo("No application attempts found.")
+        return
+
+    typer.echo("Application attempts:")
+    for record in records:
+        submitted = record.submitted_at.isoformat() if record.submitted_at else "no"
+        typer.echo(
+            f"- #{record.id} job={record.job_id} status={record.status} "
+            f"review_required={record.review_required} submitted={submitted} "
+            f"created_at={record.created_at.isoformat()}"
+        )
+
+
+@app.command("attempt-show")
+def attempt_show(
+    attempt_id: int = typer.Argument(..., help="Application attempt ID."),
+    settings: Path = typer.Option(Path("config/settings.yaml"), "--settings", "-s"),
+) -> None:
+    """Show one persisted application attempt with its audit JSON."""
+    loaded_settings = load_settings(settings)
+    init_database(loaded_settings.storage.database_url)
+
+    with session_scope(loaded_settings.storage.database_url) as session:
+        record = get_application_attempt_record(session, attempt_id)
+
+    if record is None:
+        typer.echo(f"Application attempt not found: {attempt_id}", err=True)
+        raise typer.Exit(code=1)
+
+    typer.echo(f"Application attempt #{record.id}")
+    typer.echo(f"Job ID: {record.job_id}")
+    typer.echo(f"Status: {record.status}")
+    typer.echo(f"Review required: {record.review_required}")
+    typer.echo(f"Submitted at: {record.submitted_at.isoformat() if record.submitted_at else '<not submitted>'}")
+    typer.echo(f"Created at: {record.created_at.isoformat()}")
+    typer.echo("Result:")
+    payload = json.loads(record.result_json or "{}")
+    typer.echo(json.dumps(payload, indent=2, ensure_ascii=False))
+
+
 def _copy_example(source: Path, destination: Path, force: bool) -> None:
     if destination.exists() and not force:
         typer.echo(f"Skipped existing file: {destination}")
@@ -364,6 +489,31 @@ def _copy_example(source: Path, destination: Path, force: bool) -> None:
     destination.parent.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(source, destination)
     typer.echo(f"Created {destination}")
+
+
+def _collect_review_edits(draft, interactive: bool) -> dict[str, str]:
+    if not interactive:
+        return {}
+
+    edits: dict[str, str] = {}
+    for field in draft.fields:
+        if not field.requires_human_review or field.input_type == FieldInputType.FILE:
+            continue
+
+        current = field.proposed_value or ""
+        typer.echo("")
+        typer.echo(f"Review field: {field.label}")
+        typer.echo(f"Reason: {field.reason}")
+        typer.echo(f"Current value: {current or '<empty>'}")
+        value = typer.prompt(
+            "New value (leave blank to keep pending)",
+            default="",
+            show_default=False,
+        )
+        if value.strip():
+            edits[field.field_id] = value.strip()
+
+    return edits
 
 
 async def _search_jobs(settings, keyword: str, limit: int):

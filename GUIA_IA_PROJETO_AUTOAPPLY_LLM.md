@@ -45,14 +45,14 @@ Fases implementadas ate agora:
 2. Fase 1: perfil e parser inicial de curriculo.
 3. Fase 2: busca mockada com persistencia SQLite.
 4. Fase 3: cliente LLM abstrato, prompts, schemas e ranking explicavel.
-5. Fase 4 parcial: inspecao local, preenchimento seguro e revisao CLI sem envio.
+5. Fase 4 parcial: inspecao local, preenchimento seguro, upload local de PDF e revisao CLI editavel sem envio.
 
 O que ja existe:
 
 1. `pyproject.toml` com `Typer`, `Pydantic`, `Loguru`, `SQLModel`, `pypdf`, `httpx` e `Playwright` como dependencia opcional.
 2. Loader de configuracao via YAML + variaveis de ambiente.
 3. Modelos centrais em `app/core/models.py`.
-4. Parser de curriculo PDF em `app/documents/resume.py`.
+4. Parser de curriculo PDF com normalizacao de texto PT-BR e exportacao em `app/documents/resume.py`.
 5. Cliente LLM mockado e cliente OpenAI-compativel em `app/llm/client.py`.
 6. Schemas Pydantic para normalizacao e compatibilidade em `app/llm/schemas.py`.
 7. Prompts versionados em `prompts/`.
@@ -60,10 +60,11 @@ O que ja existe:
 9. Ranking local explicavel em `app/ranking/scoring.py`.
 10. Fonte mockada e registry simples de fontes em `app/sources/`.
 11. CLI funcional em `app/cli/main.py`.
-12. Inspecao e preenchimento local seguro de formulario em `app/browser/`.
+12. Inspecao, preenchimento local seguro e aplicacao de rascunho revisado em `app/browser/`.
 13. Mapeamento conservador de campos em `app/forms/`.
-14. Rascunho de revisao CLI em `app/review/`.
-15. Suite de testes cobrindo config, CLI, storage, ranking, LLM, documentos, browser, forms e review.
+14. Rascunho de revisao CLI com edicao de campos pendentes em `app/review/`.
+15. Comandos de auditoria para `application_attempts`.
+16. Suite de testes cobrindo config, CLI, storage, ranking, LLM, documentos, browser, forms, review e auditoria.
 
 O que ainda NAO existe:
 
@@ -71,8 +72,8 @@ O que ainda NAO existe:
 2. Login manual assistido.
 3. Normalizacao real de vagas usando LLM no fluxo de busca.
 4. Automacao Playwright em sites reais.
-5. Preenchimento real de formulario.
-6. Revisao humana com edicao de respostas.
+5. Preenchimento real de formulario em sites externos.
+6. Edicao visual no navegador.
 7. Envio final de candidatura.
 
 ## 4. Estrutura atual importante
@@ -101,7 +102,7 @@ Modulos relevantes hoje:
 1. `app/config/settings.py`
    Carrega settings, profile e invariantes de seguranca.
 2. `app/documents/resume.py`
-   Valida PDF, tamanho e extrai texto com `pypdf`.
+   Valida PDF, tamanho, extrai texto com `pypdf`, corrige mojibake/acentos brasileiros quando possivel e pode salvar o texto extraido em arquivo.
 3. `app/llm/client.py`
    Expoe `LLMClient`, `MockLLMClient`, `OpenAICompatibleLLMClient` e factory.
 4. `app/ranking/scoring.py`
@@ -111,11 +112,11 @@ Modulos relevantes hoje:
 6. `app/cli/main.py`
    Orquestra os fluxos atuais.
 7. `app/browser/`
-   Abre paginas locais/teste com Playwright para inspecao e autofill seguro sem submit.
+   Abre paginas locais/teste com Playwright para inspecao, autofill seguro, upload local de PDF e aplicacao de rascunho sem submit.
 8. `app/forms/`
    Detecta e mapeia campos para valores seguros do perfil.
 9. `app/review/`
-   Monta rascunho de revisao e normaliza decisoes CLI.
+   Monta rascunho de revisao, aplica edicoes de campos e normaliza decisoes CLI.
 
 ## 5. Configuracao atual
 
@@ -133,7 +134,7 @@ Observacoes importantes:
 2. O banco padrao continua sendo `sqlite:///data/scrap_master.db`.
 3. O padrao operacional agora usa `config/settings.yaml` e `config/profile.yaml`.
 4. `profile_path` no settings local aponta para `config/profile.yaml`.
-5. `resume_pdf_path` continua sendo apenas uma referencia; o parser valida no momento de uso.
+5. `resume_pdf_path` continua sendo uma referencia; o parser valida no momento de uso e pode gerar artefato em `data/output/`.
 
 Variaveis de ambiente relevantes:
 
@@ -171,7 +172,9 @@ Fluxo de curriculo hoje:
 2. Validar extensao .pdf
 3. Validar tamanho maximo
 4. Extrair texto com pypdf
-5. Retornar erro claro se o arquivo nao puder ser lido
+5. Normalizar mojibake e diacriticos comuns em curriculos PT-BR
+6. Salvar texto extraido quando `--output` for usado
+7. Retornar erro claro se o arquivo nao puder ser lido
 ```
 
 Fluxo de formulario local hoje:
@@ -182,9 +185,10 @@ Fluxo de formulario local hoje:
 3. Mapear campos simples com dados do profile
 4. Preencher apenas campos seguros no DOM
 5. Marcar campos sensiveis para revisao humana
-6. Mostrar rascunho na CLI
-7. Salvar tentativa como draft, approved ou skipped
-8. Nunca clicar em submit
+6. Permitir edicao CLI de campos pendentes
+7. Validar e anexar PDF local configurado quando houver campo de curriculo
+8. Salvar tentativa como draft, approved ou skipped
+9. Nunca clicar em submit
 ```
 
 ## 7. Comandos CLI atuais
@@ -198,12 +202,17 @@ scrap-master init-db --settings config/settings.yaml
 scrap-master config-check --settings config/settings.yaml
 scrap-master validate-profile --profile config/profile.yaml
 scrap-master parse-resume --pdf data/input/resume.pdf
+scrap-master parse-resume --pdf data/input/resume.pdf --output data/output/resume_parsed.txt
 scrap-master search --settings config/settings.yaml --keyword "Python LLM" --limit 5
 scrap-master rank --settings config/settings.yaml --keyword "Python LLM"
 scrap-master run --settings config/settings.yaml --keyword "Machine Learning Engineer" --limit 10
 scrap-master inspect-form --url tests/fixtures/job_form.html
 scrap-master fill-form --url tests/fixtures/job_form.html
 scrap-master review --url tests/fixtures/job_form.html
+scrap-master review --url tests/fixtures/job_form.html --decision draft
+scrap-master review --url tests/fixtures/job_form.html --screenshot data/output/reviewed-form.png
+scrap-master attempts --settings config/settings.yaml
+scrap-master attempt-show 1 --settings config/settings.yaml
 ```
 
 Comandos ainda nao implementados:
@@ -224,6 +233,7 @@ Comportamentos atuais:
 1. Vagas sao deduplicadas por `url`.
 2. Matches armazenam score, motivos, riscos e requisitos ausentes.
 3. Historico de execucao armazena palavra-chave, quantidade de fontes, vagas e matches.
+4. Tentativas de candidatura podem ser listadas e inspecionadas pela CLI.
 
 ## 9. LLM e ranking
 
@@ -254,7 +264,7 @@ Estado atual do ranking:
 Status atual:
 
 1. `python -m pytest` passa.
-2. A suite cobre config, CLI, documentos, storage, ranking, LLM, browser, forms e review.
+2. A suite cobre config, CLI, documentos, storage, ranking, LLM, browser, forms, review e auditoria.
 
 Definition of Done para novas features continua sendo:
 
@@ -268,14 +278,14 @@ Definition of Done para novas features continua sendo:
 
 ## 11. Proximos passos recomendados
 
-A proxima etapa natural e completar a Fase 4 com upload local de PDF e edicao de revisao, ainda sem sites reais.
+A proxima etapa natural e endurecer a Fase 4 local com evidencias de erro e preparacao de seguranca antes de qualquer site real.
 
 Prioridade recomendada:
 
-1. Adicionar upload de PDF em fixture local.
-2. Permitir edicao CLI dos valores antes de salvar decisao.
-3. Criar screenshots/traces em erro.
-4. Preparar detector de CAPTCHA/bloqueio antes de qualquer site real.
+1. Criar screenshots/traces em erro.
+2. Preparar detector de CAPTCHA/bloqueio antes de qualquer site real.
+3. Adicionar exportacao de relatorio de auditoria em JSON/Markdown.
+4. Normalizar respostas LLM no fluxo de busca mockada antes de fontes reais.
 
 ## 12. Regra de manutencao deste guia
 
